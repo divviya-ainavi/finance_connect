@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
@@ -161,6 +161,176 @@ const Auth = () => {
     }
   };
 
+  const handleDemoLogin = async (userType: 'worker' | 'business') => {
+    setLoading(true);
+    const demoEmail = `demo.${userType}@test.com`;
+    const demoPassword = 'Demo123!';
+
+    try {
+      // Try to sign in first
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: demoEmail,
+        password: demoPassword,
+      });
+
+      if (!signInError) {
+        toast({
+          title: "Demo login successful!",
+          description: `Signed in as demo ${userType}.`,
+        });
+        return;
+      }
+
+      // If sign in fails, create the demo account
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: demoEmail,
+        password: demoPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (signUpError) throw signUpError;
+      if (!signUpData.user) throw new Error('Failed to create demo user');
+
+      // Create profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: signUpData.user.id,
+          user_type: userType,
+        })
+        .select()
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Seed type-specific data
+      if (userType === 'worker') {
+        await seedDemoWorker(profile.id);
+      } else {
+        await seedDemoBusiness(profile.id);
+      }
+
+      toast({
+        title: "Demo account ready!",
+        description: `Your demo ${userType} account has been created with sample data.`,
+      });
+    } catch (error: any) {
+      console.error('Demo login error:', error);
+      toast({
+        title: "Error",
+        description: error.message || `Failed to create demo ${userType}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const seedDemoWorker = async (profileId: string) => {
+    // Create worker profile
+    const { data: workerProfile, error: workerError } = await supabase
+      .from('worker_profiles')
+      .insert({
+        profile_id: profileId,
+        name: 'Alex Johnson',
+        pseudonym: 'Candidate #1234',
+        roles: ['bookkeeper', 'management_accountant', 'financial_controller'],
+        location: 'London',
+        max_commute_km: 25,
+        onsite_preference: 'hybrid',
+        max_days_onsite: 2,
+        visibility_mode: 'anonymous',
+        own_equipment: true,
+        systems: ['Xero', 'Sage', 'QuickBooks', 'Excel'],
+        industries: ['Professional Services', 'Retail', 'Manufacturing'],
+        company_sizes: ['small', 'mid', 'large'],
+        qualifications: 'ACCA Part-Qualified, AAT Level 4',
+        languages: { English: { written: 'native', spoken: 'native' } },
+        availability: {
+          monday: ['AM', 'PM'],
+          tuesday: ['AM', 'PM'],
+          wednesday: ['AM', 'PM'],
+          thursday: ['AM', 'PM'],
+          friday: []
+        },
+      })
+      .select()
+      .single();
+
+    if (workerError) throw workerError;
+
+    // Add skills
+    const skills = [
+      { skill_name: 'AP Processing', skill_level: 4 },
+      { skill_name: 'Bank Reconciliations', skill_level: 4 },
+      { skill_name: 'Payroll Processing', skill_level: 3 },
+      { skill_name: 'Management Reporting', skill_level: 3 },
+      { skill_name: 'Budgeting', skill_level: 2 },
+      { skill_name: 'Credit Control', skill_level: 3 },
+    ];
+
+    await supabase.from('worker_skills').insert(
+      skills.map(skill => ({
+        worker_profile_id: workerProfile.id,
+        ...skill,
+      }))
+    );
+
+    // Update verification status
+    await supabase
+      .from('verification_statuses')
+      .update({
+        testing_status: 'passed',
+        references_status: 'in_progress',
+        interview_status: 'not_started',
+      })
+      .eq('worker_profile_id', workerProfile.id);
+  };
+
+  const seedDemoBusiness = async (profileId: string) => {
+    // Create business profile
+    const { data: businessProfile, error: businessError } = await supabase
+      .from('business_profiles')
+      .insert({
+        profile_id: profileId,
+        company_name: 'Acme Financial Services Ltd',
+        contact_name: 'Sarah Mitchell',
+        contact_role: 'Finance Director',
+      })
+      .select()
+      .single();
+
+    if (businessError) throw businessError;
+
+    // Get a demo worker to create connection request
+    const { data: demoWorker } = await supabase
+      .from('worker_profiles')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
+
+    if (demoWorker) {
+      // Create sample connection request
+      await supabase.from('connection_requests').insert({
+        business_profile_id: businessProfile.id,
+        worker_profile_id: demoWorker.id,
+        message: 'We are looking for part-time bookkeeping support for our growing client base.',
+        hours_per_week: 20,
+        remote_onsite: 'Hybrid - 1 day per week onsite',
+        rate_offered: 35.00,
+        status: 'pending',
+      });
+
+      // Add to shortlist
+      await supabase.from('shortlists').insert({
+        business_profile_id: businessProfile.id,
+        worker_profile_id: demoWorker.id,
+      });
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -284,6 +454,42 @@ const Auth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Demo Login Section */}
+        <Card className="shadow-medium border-muted mt-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-center text-muted-foreground">
+              Quick Demo Access
+            </CardTitle>
+            <CardDescription className="text-xs text-center">
+              Test the platform instantly with pre-populated demo accounts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button
+              variant="outline"
+              className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              onClick={() => handleDemoLogin('worker')}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Try as Demo Worker
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+              onClick={() => handleDemoLogin('business')}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Try as Demo Business
+            </Button>
           </CardContent>
         </Card>
 
