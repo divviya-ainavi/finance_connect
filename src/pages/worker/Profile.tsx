@@ -13,27 +13,43 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Loader2, Save, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const ROLES = [
-  { value: "accounts_payable", label: "Accounts Payable" },
-  { value: "accounts_receivable", label: "Accounts Receivable" },
-  { value: "bookkeeper", label: "Bookkeeper" },
-  { value: "payroll_clerk", label: "Payroll Clerk" },
-  { value: "management_accountant", label: "Management Accountant" },
-  { value: "credit_controller", label: "Credit Controller" },
-  { value: "financial_controller", label: "Financial Controller" },
-];
-
+const ROLES = [{
+  value: "accounts_payable",
+  label: "Accounts Payable"
+}, {
+  value: "accounts_receivable",
+  label: "Accounts Receivable"
+}, {
+  value: "bookkeeper",
+  label: "Bookkeeper"
+}, {
+  value: "payroll_clerk",
+  label: "Payroll Clerk"
+}, {
+  value: "management_accountant",
+  label: "Management Accountant"
+}, {
+  value: "credit_controller",
+  label: "Credit Controller"
+}, {
+  value: "financial_controller",
+  label: "Financial Controller"
+}];
 const SYSTEMS = ["Xero", "Sage", "QuickBooks", "SAP", "Oracle", "Excel", "NetSuite", "Dynamics"];
 const INDUSTRIES = ["Professional Services", "Retail", "Manufacturing", "Technology", "Healthcare", "Finance"];
 const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-500", "500+"];
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const TIME_SLOTS = ["AM", "PM", "Evening"];
-
 const WorkerProfile = () => {
   const navigate = useNavigate();
-  const { user, userType, loading: authLoading } = useAuth();
-  const { toast } = useToast();
+  const {
+    user,
+    userType,
+    loading: authLoading
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -53,36 +69,26 @@ const WorkerProfile = () => {
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
   const [qualifications, setQualifications] = useState("");
   const [ownEquipment, setOwnEquipment] = useState(false);
-
   useEffect(() => {
     if (!authLoading && (!user || userType !== "worker")) {
       navigate("/auth");
       return;
     }
-
     if (user && userType === "worker") {
       fetchProfile();
     }
   }, [user, userType, authLoading, navigate]);
-
   const fetchProfile = async () => {
     try {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-
+      const {
+        data: profileData
+      } = await supabase.from("profiles").select("id").eq("user_id", user!.id).single();
       if (!profileData) return;
-
-      const { data, error } = await supabase
-        .from("worker_profiles")
-        .select("*")
-        .eq("profile_id", profileData.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from("worker_profiles").select("*").eq("profile_id", profileData.id).single();
       if (error) throw error;
-
       if (data) {
         setProfileId(data.id);
         setName(data.name || "");
@@ -106,11 +112,9 @@ const WorkerProfile = () => {
       setLoading(false);
     }
   };
-
   const calculateProgress = () => {
     let completed = 0;
     const total = 10;
-    
     if (name) completed++;
     if (selectedRoles.length > 0) completed++;
     if (location) completed++;
@@ -121,28 +125,22 @@ const WorkerProfile = () => {
     if (selectedCompanySizes.length > 0) completed++;
     if (qualifications) completed++;
     if (visibilityMode === "anonymous" ? pseudonym : true) completed++;
-    
-    return (completed / total) * 100;
+    return completed / total * 100;
   };
-
   const handleSave = async () => {
     if (!name || selectedRoles.length === 0) {
       toast({
         title: "Missing required fields",
         description: "Please provide your name and select at least one role.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setSaving(true);
     try {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .single();
-
+      const {
+        data: profileData
+      } = await supabase.from("profiles").select("id").eq("user_id", user!.id).single();
       const profilePayload = {
         profile_id: profileData!.id,
         name,
@@ -158,88 +156,64 @@ const WorkerProfile = () => {
         industries: selectedIndustries,
         company_sizes: selectedCompanySizes,
         qualifications,
-        own_equipment: ownEquipment,
+        own_equipment: ownEquipment
       };
-
       if (profileId) {
-        const { error } = await supabase
-          .from("worker_profiles")
-          .update(profilePayload)
-          .eq("id", profileId);
-
+        const {
+          error
+        } = await supabase.from("worker_profiles").update(profilePayload).eq("id", profileId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("worker_profiles")
-          .insert([profilePayload]);
-
+        const {
+          error
+        } = await supabase.from("worker_profiles").insert([profilePayload]);
         if (error) throw error;
       }
-
       toast({
         title: "Profile saved",
-        description: "Your profile has been updated successfully.",
+        description: "Your profile has been updated successfully."
       });
-      
       navigate("/worker/dashboard");
     } catch (error) {
       console.error("Error saving profile:", error);
       toast({
         title: "Error saving profile",
         description: "Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setSaving(false);
     }
   };
-
   const toggleRole = (role: string) => {
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
+    setSelectedRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
   };
-
   const toggleSystem = (system: string) => {
-    setSelectedSystems((prev) =>
-      prev.includes(system) ? prev.filter((s) => s !== system) : [...prev, system]
-    );
+    setSelectedSystems(prev => prev.includes(system) ? prev.filter(s => s !== system) : [...prev, system]);
   };
-
   const toggleIndustry = (industry: string) => {
-    setSelectedIndustries((prev) =>
-      prev.includes(industry) ? prev.filter((i) => i !== industry) : [...prev, industry]
-    );
+    setSelectedIndustries(prev => prev.includes(industry) ? prev.filter(i => i !== industry) : [...prev, industry]);
   };
-
   const toggleCompanySize = (size: string) => {
-    setSelectedCompanySizes((prev) =>
-      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
-    );
+    setSelectedCompanySizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
   };
-
   const toggleAvailability = (day: string, slot: string) => {
-    setAvailability((prev) => {
+    setAvailability(prev => {
       const daySlots = prev[day] || [];
-      const updated = daySlots.includes(slot)
-        ? daySlots.filter((s) => s !== slot)
-        : [...daySlots, slot];
-      return { ...prev, [day]: updated };
+      const updated = daySlots.includes(slot) ? daySlots.filter(s => s !== slot) : [...daySlots, slot];
+      return {
+        ...prev,
+        [day]: updated
+      };
     });
   };
-
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+      </div>;
   }
-
   const progress = calculateProgress();
-
-  return (
-    <div className="min-h-screen bg-gradient-subtle">
+  return <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => navigate("/worker/dashboard")} className="mb-4">
@@ -277,12 +251,7 @@ const WorkerProfile = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="name">Full Name *</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your full name"
-                />
+                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" />
               </div>
 
               <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -292,45 +261,26 @@ const WorkerProfile = () => {
                     Hide your real name from businesses
                   </p>
                 </div>
-                <Switch
-                  checked={visibilityMode === "anonymous"}
-                  onCheckedChange={(checked) =>
-                    setVisibilityMode(checked ? "anonymous" : "fully_disclosed")
-                  }
-                />
+                <Switch checked={visibilityMode === "anonymous"} onCheckedChange={checked => setVisibilityMode(checked ? "anonymous" : "fully_disclosed")} />
               </div>
 
-              {visibilityMode === "anonymous" && (
-                <div>
+              {visibilityMode === "anonymous" && <div>
                   <Label htmlFor="pseudonym">Pseudonym</Label>
-                  <Input
-                    id="pseudonym"
-                    value={pseudonym}
-                    onChange={(e) => setPseudonym(e.target.value)}
-                    placeholder="e.g., Candidate #1234"
-                  />
-                </div>
-              )}
+                  <Input id="pseudonym" value={pseudonym} onChange={e => setPseudonym(e.target.value)} placeholder="e.g., Candidate #1234" />
+                </div>}
             </CardContent>
           </Card>
 
           {/* Roles */}
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle>Job Roles *</CardTitle>
+              <CardTitle>Capabilities</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {ROLES.map((role) => (
-                  <Badge
-                    key={role.value}
-                    variant={selectedRoles.includes(role.value) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleRole(role.value)}
-                  >
+                {ROLES.map(role => <Badge key={role.value} variant={selectedRoles.includes(role.value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleRole(role.value)}>
                     {role.label}
-                  </Badge>
-                ))}
+                  </Badge>)}
               </div>
             </CardContent>
           </Card>
@@ -343,24 +293,13 @@ const WorkerProfile = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="City or region"
-                />
+                <Input id="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="City or region" />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="commute">Max Commute (km)</Label>
-                  <Input
-                    id="commute"
-                    type="number"
-                    value={maxCommuteKm}
-                    onChange={(e) => setMaxCommuteKm(e.target.value)}
-                    placeholder="25"
-                  />
+                  <Input id="commute" type="number" value={maxCommuteKm} onChange={e => setMaxCommuteKm(e.target.value)} placeholder="25" />
                 </div>
 
                 <div>
@@ -378,18 +317,10 @@ const WorkerProfile = () => {
                 </div>
               </div>
 
-              {onsitePreference === "hybrid" && (
-                <div>
+              {onsitePreference === "hybrid" && <div>
                   <Label htmlFor="maxDays">Max Days Onsite Per Week</Label>
-                  <Input
-                    id="maxDays"
-                    type="number"
-                    value={maxDaysOnsite}
-                    onChange={(e) => setMaxDaysOnsite(e.target.value)}
-                    placeholder="2"
-                  />
-                </div>
-              )}
+                  <Input id="maxDays" type="number" value={maxDaysOnsite} onChange={e => setMaxDaysOnsite(e.target.value)} placeholder="2" />
+                </div>}
             </CardContent>
           </Card>
 
@@ -400,25 +331,14 @@ const WorkerProfile = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {DAYS.map((day) => (
-                  <div key={day} className="flex items-center gap-4">
+                {DAYS.map(day => <div key={day} className="flex items-center gap-4">
                     <div className="w-24 text-sm font-medium">{day}</div>
                     <div className="flex gap-2">
-                      {TIME_SLOTS.map((slot) => (
-                        <Badge
-                          key={slot}
-                          variant={
-                            availability[day]?.includes(slot) ? "default" : "outline"
-                          }
-                          className="cursor-pointer"
-                          onClick={() => toggleAvailability(day, slot)}
-                        >
+                      {TIME_SLOTS.map(slot => <Badge key={slot} variant={availability[day]?.includes(slot) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleAvailability(day, slot)}>
                           {slot}
-                        </Badge>
-                      ))}
+                        </Badge>)}
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </CardContent>
           </Card>
@@ -430,16 +350,9 @@ const WorkerProfile = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {SYSTEMS.map((system) => (
-                  <Badge
-                    key={system}
-                    variant={selectedSystems.includes(system) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleSystem(system)}
-                  >
+                {SYSTEMS.map(system => <Badge key={system} variant={selectedSystems.includes(system) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleSystem(system)}>
                     {system}
-                  </Badge>
-                ))}
+                  </Badge>)}
               </div>
             </CardContent>
           </Card>
@@ -451,16 +364,9 @@ const WorkerProfile = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {INDUSTRIES.map((industry) => (
-                  <Badge
-                    key={industry}
-                    variant={selectedIndustries.includes(industry) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleIndustry(industry)}
-                  >
+                {INDUSTRIES.map(industry => <Badge key={industry} variant={selectedIndustries.includes(industry) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleIndustry(industry)}>
                     {industry}
-                  </Badge>
-                ))}
+                  </Badge>)}
               </div>
             </CardContent>
           </Card>
@@ -472,16 +378,9 @@ const WorkerProfile = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {COMPANY_SIZES.map((size) => (
-                  <Badge
-                    key={size}
-                    variant={selectedCompanySizes.includes(size) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleCompanySize(size)}
-                  >
+                {COMPANY_SIZES.map(size => <Badge key={size} variant={selectedCompanySizes.includes(size) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleCompanySize(size)}>
                     {size} employees
-                  </Badge>
-                ))}
+                  </Badge>)}
               </div>
             </CardContent>
           </Card>
@@ -494,13 +393,7 @@ const WorkerProfile = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="qualifications">Qualifications</Label>
-                <Textarea
-                  id="qualifications"
-                  value={qualifications}
-                  onChange={(e) => setQualifications(e.target.value)}
-                  placeholder="e.g., AAT Level 4, ACCA Part-Qualified"
-                  rows={3}
-                />
+                <Textarea id="qualifications" value={qualifications} onChange={e => setQualifications(e.target.value)} placeholder="e.g., AAT Level 4, ACCA Part-Qualified" rows={3} />
               </div>
 
               <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -518,17 +411,13 @@ const WorkerProfile = () => {
           {/* Actions */}
           <div className="flex gap-4">
             <Button onClick={handleSave} disabled={saving} className="flex-1">
-              {saving ? (
-                <>
+              {saving ? <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Saving...
-                </>
-              ) : (
-                <>
+                </> : <>
                   <Save className="h-4 w-4 mr-2" />
                   Save Profile
-                </>
-              )}
+                </>}
             </Button>
             <Button variant="outline" onClick={() => navigate("/worker/dashboard")}>
               Cancel
@@ -536,8 +425,6 @@ const WorkerProfile = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default WorkerProfile;
