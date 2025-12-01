@@ -21,6 +21,7 @@ interface WorkerProfile {
   visibility_mode: string;
   industries: string[];
   systems: string[];
+  available_from: string | null;
   verification_statuses?: {
     testing_status: string;
     references_status: string;
@@ -38,6 +39,7 @@ const Search = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [locationFilter, setLocationFilter] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>("any");
 
   useEffect(() => {
     fetchCandidates();
@@ -45,7 +47,7 @@ const Search = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [candidates, searchTerm, roleFilter, locationFilter]);
+  }, [candidates, searchTerm, roleFilter, locationFilter, availabilityFilter]);
 
   const fetchCandidates = async () => {
     try {
@@ -89,14 +91,43 @@ const Search = () => {
       );
     }
 
+    // Availability filter
+    if (availabilityFilter && availabilityFilter !== "any") {
+      const now = new Date();
+      filtered = filtered.filter((c) => {
+        if (!c.available_from) return true; // No available_from = available immediately
+        const availableDate = new Date(c.available_from);
+        
+        if (availabilityFilter === "now") return availableDate <= now;
+        if (availabilityFilter === "1week") {
+          const oneWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          return availableDate <= oneWeek;
+        }
+        if (availabilityFilter === "2weeks") {
+          const twoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+          return availableDate <= twoWeeks;
+        }
+        if (availabilityFilter === "1month") {
+          const oneMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          return availableDate <= oneMonth;
+        }
+        return true;
+      });
+    }
+
     setFilteredCandidates(filtered);
   };
 
   const getDisplayName = (candidate: WorkerProfile) => {
-    if (candidate.visibility_mode === "anonymous" && candidate.pseudonym) {
-      return candidate.pseudonym;
-    }
     return candidate.name;
+  };
+
+  const getAvailabilityText = (candidate: WorkerProfile) => {
+    if (!candidate.available_from) return "Available now";
+    const availableDate = new Date(candidate.available_from);
+    const now = new Date();
+    if (availableDate <= now) return "Available now";
+    return `Available from ${availableDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
   };
 
   const getVerificationCount = (candidate: WorkerProfile) => {
@@ -169,12 +200,12 @@ const Search = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="search">Skills or Systems</Label>
                 <Input
                   id="search"
-                  placeholder="e.g. Xero, SAP, QuickBooks"
+                  placeholder="e.g. Xero, SAP"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -206,6 +237,21 @@ const Search = () => {
                   onChange={(e) => setLocationFilter(e.target.value)}
                 />
               </div>
+              <div>
+                <Label htmlFor="availability">Available within</Label>
+                <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
+                  <SelectTrigger id="availability">
+                    <SelectValue placeholder="Any time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any time</SelectItem>
+                    <SelectItem value="now">Now</SelectItem>
+                    <SelectItem value="1week">1 week</SelectItem>
+                    <SelectItem value="2weeks">2 weeks</SelectItem>
+                    <SelectItem value="1month">1 month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -236,9 +282,9 @@ const Search = () => {
                     <CardTitle className="text-lg">
                       {getDisplayName(candidate)}
                     </CardTitle>
-                    {candidate.visibility_mode === "anonymous" && (
-                      <Badge variant="secondary">Anonymous</Badge>
-                    )}
+                    <Badge variant={candidate.available_from && new Date(candidate.available_from) > new Date() ? "outline" : "default"}>
+                      {getAvailabilityText(candidate)}
+                    </Badge>
                   </div>
                   <CardDescription className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />

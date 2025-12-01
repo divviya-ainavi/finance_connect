@@ -353,6 +353,7 @@ export type Database = {
         Row: {
           availability: Json | null
           availability_exceptions: Json | null
+          available_from: string | null
           company_sizes: string[] | null
           created_at: string | null
           cv_url: string | null
@@ -384,6 +385,7 @@ export type Database = {
         Insert: {
           availability?: Json | null
           availability_exceptions?: Json | null
+          available_from?: string | null
           company_sizes?: string[] | null
           created_at?: string | null
           cv_url?: string | null
@@ -417,6 +419,7 @@ export type Database = {
         Update: {
           availability?: Json | null
           availability_exceptions?: Json | null
+          available_from?: string | null
           company_sizes?: string[] | null
           created_at?: string | null
           cv_url?: string | null
