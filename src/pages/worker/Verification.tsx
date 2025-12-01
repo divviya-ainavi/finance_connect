@@ -1,0 +1,327 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface TestAttempt {
+  role: string;
+  passed: boolean;
+  score: number;
+  lockout_until: string | null;
+  attempted_at: string;
+}
+
+interface Reference {
+  id: string;
+  referee_name: string;
+  referee_email: string;
+  referee_role: string;
+  referee_company: string;
+  status: string;
+}
+
+const Verification = () => {
+  const { user, userType } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [workerProfileId, setWorkerProfileId] = useState<string | null>(null);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
+  const [references, setReferences] = useState<Reference[]>([]);
+  const [showAddReference, setShowAddReference] = useState(false);
+  const [newReference, setNewReference] = useState({
+    name: "",
+    email: "",
+    role: "",
+    company: "",
+  });
+
+  useEffect(() => {
+    if (!user || userType !== "worker") {
+      navigate("/auth");
+      return;
+    }
+    fetchVerificationData();
+  }, [user, userType, navigate]);
+
+  const fetchVerificationData = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (!profile) return;
+
+      const { data: workerProfile } = await supabase
+        .from("worker_profiles")
+        .select("id, roles")
+        .eq("profile_id", profile.id)
+        .single();
+
+      if (workerProfile) {
+        setWorkerProfileId(workerProfile.id);
+        setSelectedRoles(workerProfile.roles || []);
+
+        const { data: attempts } = await supabase
+          .from("test_attempts")
+          .select("*")
+          .eq("worker_profile_id", workerProfile.id)
+          .order("attempted_at", { ascending: false });
+
+        setTestAttempts(attempts || []);
+
+        const { data: refs } = await supabase
+          .from("worker_references")
+          .select("*")
+          .eq("worker_profile_id", workerProfile.id)
+          .order("created_at", { ascending: false });
+
+        setReferences(refs || []);
+      }
+    } catch (error) {
+      console.error("Error fetching verification data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddReference = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!workerProfileId) return;
+
+    const { error } = await supabase
+      .from("worker_references")
+      .insert({
+        worker_profile_id: workerProfileId,
+        referee_name: newReference.name,
+        referee_email: newReference.email,
+        referee_role: newReference.role,
+        referee_company: newReference.company,
+      });
+
+    if (error) {
+      toast({
+        title: "Error adding reference",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Reference added",
+        description: "Your reference has been added successfully.",
+      });
+      setNewReference({ name: "", email: "", role: "", company: "" });
+      setShowAddReference(false);
+      fetchVerificationData();
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    const labels: Record<string, string> = {
+      accounts_payable: "Accounts Payable",
+      accounts_receivable: "Accounts Receivable",
+      bookkeeper: "Bookkeeper",
+      payroll_clerk: "Payroll Clerk",
+      management_accountant: "Management Accountant",
+      credit_controller: "Credit Controller",
+      financial_controller: "Financial Controller",
+      finance_manager: "Finance Manager",
+      cfo_fpa: "CFO / FP&A",
+    };
+    return labels[role] || role;
+  };
+
+  const getRoleTestStatus = (role: string) => {
+    const attempt = testAttempts.find((a) => a.role === role);
+    if (!attempt) return { status: "not_started", icon: Clock, color: "secondary" };
+    
+    if (attempt.lockout_until && new Date(attempt.lockout_until) > new Date()) {
+      return { status: "locked", icon: XCircle, color: "destructive", lockoutDate: attempt.lockout_until };
+    }
+    
+    if (attempt.passed) {
+      return { status: "passed", icon: CheckCircle2, color: "default" };
+    }
+    
+    return { status: "failed", icon: XCircle, color: "destructive" };
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive"> = {
+      pending: "secondary",
+      sent: "secondary",
+      verified: "default",
+      declined: "destructive",
+    };
+    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Verification</h1>
+          <Button variant="outline" onClick={() => navigate("/worker/dashboard")}>
+            Back to Dashboard
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Skills Testing</CardTitle>
+            <CardDescription>
+              Complete a test for each role you offer. Pass rate: 80% or higher.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedRoles.map((role) => {
+              const testStatus = getRoleTestStatus(role);
+              const StatusIcon = testStatus.icon;
+              
+              return (
+                <div
+                  key={role}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <StatusIcon className="h-5 w-5" />
+                    <div>
+                      <p className="font-medium">{getRoleLabel(role)}</p>
+                      {testStatus.status === "locked" && (
+                        <p className="text-sm text-muted-foreground">
+                          Locked until {new Date(testStatus.lockoutDate!).toLocaleDateString()}
+                        </p>
+                      )}
+                      {testStatus.status === "passed" && (
+                        <p className="text-sm text-muted-foreground">Test passed</p>
+                      )}
+                      {testStatus.status === "failed" && (
+                        <p className="text-sm text-muted-foreground">Test failed - retry available</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => navigate(`/worker/test/${role}`)}
+                    disabled={testStatus.status === "locked" || testStatus.status === "passed"}
+                  >
+                    {testStatus.status === "not_started" ? "Start Test" : "Retake Test"}
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>References</CardTitle>
+            <CardDescription>
+              Add professional references to verify your experience.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {references.map((ref) => (
+              <div key={ref.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <p className="font-medium">{ref.referee_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {ref.referee_role} at {ref.referee_company}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{ref.referee_email}</p>
+                </div>
+                {getStatusBadge(ref.status)}
+              </div>
+            ))}
+            
+            {showAddReference ? (
+              <form onSubmit={handleAddReference} className="space-y-4 border p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input
+                      value={newReference.name}
+                      onChange={(e) => setNewReference({ ...newReference, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={newReference.email}
+                      onChange={(e) => setNewReference({ ...newReference, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Role</Label>
+                    <Input
+                      value={newReference.role}
+                      onChange={(e) => setNewReference({ ...newReference, role: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Company</Label>
+                    <Input
+                      value={newReference.company}
+                      onChange={(e) => setNewReference({ ...newReference, company: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit">Add Reference</Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowAddReference(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <Button onClick={() => setShowAddReference(true)} variant="outline">
+                Add Reference
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Interview</CardTitle>
+            <CardDescription>Coming soon - video interview scheduling</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              This feature will be available in a future update.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default Verification;

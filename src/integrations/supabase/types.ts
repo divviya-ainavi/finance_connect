@@ -166,6 +166,74 @@ export type Database = {
           },
         ]
       }
+      test_attempts: {
+        Row: {
+          attempted_at: string | null
+          id: string
+          lockout_until: string | null
+          passed: boolean
+          questions_answered: Json | null
+          role: Database["public"]["Enums"]["finance_role"]
+          score: number
+          worker_profile_id: string
+        }
+        Insert: {
+          attempted_at?: string | null
+          id?: string
+          lockout_until?: string | null
+          passed: boolean
+          questions_answered?: Json | null
+          role: Database["public"]["Enums"]["finance_role"]
+          score: number
+          worker_profile_id: string
+        }
+        Update: {
+          attempted_at?: string | null
+          id?: string
+          lockout_until?: string | null
+          passed?: boolean
+          questions_answered?: Json | null
+          role?: Database["public"]["Enums"]["finance_role"]
+          score?: number
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_attempts_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_questions: {
+        Row: {
+          correct_answer: number
+          created_at: string | null
+          id: string
+          options: Json
+          question_text: string
+          role: Database["public"]["Enums"]["finance_role"]
+        }
+        Insert: {
+          correct_answer: number
+          created_at?: string | null
+          id?: string
+          options: Json
+          question_text: string
+          role: Database["public"]["Enums"]["finance_role"]
+        }
+        Update: {
+          correct_answer?: number
+          created_at?: string | null
+          id?: string
+          options?: Json
+          question_text?: string
+          role?: Database["public"]["Enums"]["finance_role"]
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -246,16 +314,55 @@ export type Database = {
           },
         ]
       }
+      worker_languages: {
+        Row: {
+          created_at: string | null
+          id: string
+          language_name: string
+          spoken_level: string | null
+          worker_profile_id: string
+          written_level: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          language_name: string
+          spoken_level?: string | null
+          worker_profile_id: string
+          written_level?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          language_name?: string
+          spoken_level?: string | null
+          worker_profile_id?: string
+          written_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_languages_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_profiles: {
         Row: {
           availability: Json | null
+          availability_exceptions: Json | null
           company_sizes: string[] | null
           created_at: string | null
           cv_url: string | null
+          hourly_rate_max: number | null
+          hourly_rate_min: number | null
           id: string
           industries: string[] | null
           languages: Json | null
           location: string | null
+          location_constraints: string | null
           max_commute_km: number | null
           max_days_onsite: number | null
           name: string
@@ -266,20 +373,27 @@ export type Database = {
           profile_id: string
           pseudonym: string | null
           qualifications: string | null
+          rate_negotiable: boolean | null
           roles: Database["public"]["Enums"]["finance_role"][]
           systems: string[] | null
+          total_hours_per_week: number | null
+          travel_time_minutes: number | null
           updated_at: string | null
           visibility_mode: Database["public"]["Enums"]["visibility_mode"] | null
         }
         Insert: {
           availability?: Json | null
+          availability_exceptions?: Json | null
           company_sizes?: string[] | null
           created_at?: string | null
           cv_url?: string | null
+          hourly_rate_max?: number | null
+          hourly_rate_min?: number | null
           id?: string
           industries?: string[] | null
           languages?: Json | null
           location?: string | null
+          location_constraints?: string | null
           max_commute_km?: number | null
           max_days_onsite?: number | null
           name: string
@@ -290,8 +404,11 @@ export type Database = {
           profile_id: string
           pseudonym?: string | null
           qualifications?: string | null
+          rate_negotiable?: boolean | null
           roles?: Database["public"]["Enums"]["finance_role"][]
           systems?: string[] | null
+          total_hours_per_week?: number | null
+          travel_time_minutes?: number | null
           updated_at?: string | null
           visibility_mode?:
             | Database["public"]["Enums"]["visibility_mode"]
@@ -299,13 +416,17 @@ export type Database = {
         }
         Update: {
           availability?: Json | null
+          availability_exceptions?: Json | null
           company_sizes?: string[] | null
           created_at?: string | null
           cv_url?: string | null
+          hourly_rate_max?: number | null
+          hourly_rate_min?: number | null
           id?: string
           industries?: string[] | null
           languages?: Json | null
           location?: string | null
+          location_constraints?: string | null
           max_commute_km?: number | null
           max_days_onsite?: number | null
           name?: string
@@ -316,8 +437,11 @@ export type Database = {
           profile_id?: string
           pseudonym?: string | null
           qualifications?: string | null
+          rate_negotiable?: boolean | null
           roles?: Database["public"]["Enums"]["finance_role"][]
           systems?: string[] | null
+          total_hours_per_week?: number | null
+          travel_time_minutes?: number | null
           updated_at?: string | null
           visibility_mode?:
             | Database["public"]["Enums"]["visibility_mode"]
@@ -329,6 +453,88 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_qualifications: {
+        Row: {
+          created_at: string | null
+          details: string | null
+          id: string
+          qualification_type: Database["public"]["Enums"]["qualification_type"]
+          worker_profile_id: string
+          year_obtained: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          qualification_type: Database["public"]["Enums"]["qualification_type"]
+          worker_profile_id: string
+          year_obtained?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          qualification_type?: Database["public"]["Enums"]["qualification_type"]
+          worker_profile_id?: string
+          year_obtained?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_qualifications_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_references: {
+        Row: {
+          admin_notes: string | null
+          created_at: string | null
+          id: string
+          referee_company: string | null
+          referee_email: string
+          referee_name: string
+          referee_role: string | null
+          status: string | null
+          updated_at: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string | null
+          id?: string
+          referee_company?: string | null
+          referee_email: string
+          referee_name: string
+          referee_role?: string | null
+          status?: string | null
+          updated_at?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string | null
+          id?: string
+          referee_company?: string | null
+          referee_email?: string
+          referee_name?: string
+          referee_role?: string | null
+          status?: string | null
+          updated_at?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_references_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -365,6 +571,38 @@ export type Database = {
           },
         ]
       }
+      worker_system_proficiency: {
+        Row: {
+          created_at: string | null
+          id: string
+          proficiency_level: number
+          system_name: string
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          proficiency_level: number
+          system_name: string
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          proficiency_level?: number
+          system_name?: string
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_system_proficiency_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -389,7 +627,22 @@ export type Database = {
         | "management_accountant"
         | "credit_controller"
         | "financial_controller"
+        | "finance_manager"
+        | "cfo_fpa"
       onsite_preference: "fully_remote" | "hybrid" | "onsite"
+      qualification_type:
+        | "aat_level_2"
+        | "aat_level_3"
+        | "aat_level_4"
+        | "acca_part_qualified"
+        | "acca_qualified"
+        | "cima_part_qualified"
+        | "cima_qualified"
+        | "aca_part_qualified"
+        | "aca_qualified"
+        | "degree"
+        | "masters"
+        | "other"
       user_type: "worker" | "business"
       verification_status:
         | "not_started"
@@ -535,8 +788,24 @@ export const Constants = {
         "management_accountant",
         "credit_controller",
         "financial_controller",
+        "finance_manager",
+        "cfo_fpa",
       ],
       onsite_preference: ["fully_remote", "hybrid", "onsite"],
+      qualification_type: [
+        "aat_level_2",
+        "aat_level_3",
+        "aat_level_4",
+        "acca_part_qualified",
+        "acca_qualified",
+        "cima_part_qualified",
+        "cima_qualified",
+        "aca_part_qualified",
+        "aca_qualified",
+        "degree",
+        "masters",
+        "other",
+      ],
       user_type: ["worker", "business"],
       verification_status: [
         "not_started",
