@@ -60,7 +60,7 @@ const Search = () => {
     if (user && userType === "business") {
       calculateRecommended();
     }
-  }, [candidates, user, userType]);
+  }, [filteredCandidates, user, userType, roleFilter, locationFilter, minRate, maxRate]);
 
   const fetchCandidates = async () => {
     try {
@@ -170,31 +170,65 @@ const Search = () => {
   };
 
   const calculateRecommended = () => {
-    const scored = candidates.map((c) => {
+    // Use filtered candidates instead of all candidates
+    const candidatesToScore = filteredCandidates.length > 0 ? filteredCandidates : candidates;
+    
+    const scored = candidatesToScore.map((c) => {
       let score = 0;
       
-      // Rating boost (30%)
+      // Rating quality (25%)
       if (c.average_rating) {
-        score += (c.average_rating / 5) * 30;
+        score += (c.average_rating / 5) * 25;
       }
       
-      // Availability boost (20%)
+      // Review volume trust (10%)
+      if (c.review_count && c.review_count > 0) {
+        score += Math.min(10, c.review_count * 2);
+      }
+      
+      // Availability (15%)
       if (!c.available_from || new Date(c.available_from) <= new Date()) {
-        score += 20;
+        score += 15;
+      } else {
+        const daysUntilAvailable = (new Date(c.available_from).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+        score += Math.max(0, 15 - daysUntilAvailable);
       }
       
-      // Verification boost (15%)
+      // Verification completeness (15%)
       const verifications = getVerificationCount(c);
       score += (verifications / 3) * 15;
       
-      // Rate reasonableness (20%)
-      if (c.hourly_rate_min && c.hourly_rate_min <= 35) {
-        score += 20;
+      // Rate match (15%) - if user set budget, prioritize matches
+      if (maxRate && c.hourly_rate_min) {
+        const userMaxRate = parseFloat(maxRate);
+        if (c.hourly_rate_min <= userMaxRate) {
+          score += 15;
+        } else {
+          // Partial points if close to budget
+          const difference = c.hourly_rate_min - userMaxRate;
+          score += Math.max(0, 15 - difference);
+        }
+      } else if (minRate && c.hourly_rate_min) {
+        const userMinRate = parseFloat(minRate);
+        if (c.hourly_rate_min >= userMinRate) {
+          score += 10;
+        }
+      } else {
+        score += 10; // Default if no rate filter
       }
       
-      // Review count boost (15%)
-      if (c.review_count && c.review_count > 0) {
-        score += Math.min(15, c.review_count * 3);
+      // Role match (10%)
+      if (roleFilter && roleFilter !== "all" && c.roles?.includes(roleFilter as any)) {
+        score += 10;
+      } else if (!roleFilter || roleFilter === "all") {
+        score += 5; // Partial points if no filter active
+      }
+      
+      // Location match (10%)
+      if (locationFilter && c.location?.toLowerCase().includes(locationFilter.toLowerCase())) {
+        score += 10;
+      } else if (!locationFilter) {
+        score += 5; // Partial points if no filter active
       }
       
       return { ...c, matchScore: score };
