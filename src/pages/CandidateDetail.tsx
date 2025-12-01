@@ -237,9 +237,6 @@ const CandidateDetail = () => {
 
   const getDisplayName = () => {
     if (!worker) return "";
-    if (worker.visibility_mode === "anonymous" && worker.pseudonym) {
-      return worker.pseudonym;
-    }
     return worker.name;
   };
 
@@ -287,9 +284,6 @@ const CandidateDetail = () => {
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <CardTitle className="text-2xl">{getDisplayName()}</CardTitle>
-                    {worker.visibility_mode === "anonymous" && (
-                      <Badge variant="secondary">Anonymous</Badge>
-                    )}
                   </div>
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
