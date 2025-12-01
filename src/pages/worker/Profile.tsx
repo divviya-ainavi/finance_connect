@@ -99,6 +99,11 @@ const WorkerProfile = () => {
   const [languages, setLanguages] = useState<Array<{ name: string; written: string; spoken: string }>>([]);
   const [qualifications, setQualifications] = useState<Array<{ type: string; details: string; year: number | null }>>([]);
   
+  // CV upload
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  
   // Industries & Company Sizes
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
@@ -162,6 +167,7 @@ const WorkerProfile = () => {
         setSelectedIndustries(data.industries || []);
         setSelectedCompanySizes(data.company_sizes || []);
         setOwnEquipment(data.own_equipment || false);
+        setCvUrl(data.cv_url || null);
 
         // Fetch skills
         const { data: skillsData } = await supabase
@@ -246,6 +252,57 @@ const WorkerProfile = () => {
     
     return (completed / total) * 100;
   };
+  
+  const handleCvUpload = async (file: File) => {
+    if (!user) return null;
+    
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError, data } = await supabase.storage
+      .from('cvs')
+      .upload(fileName, file, { upsert: true });
+    
+    if (uploadError) {
+      console.error('CV upload error:', uploadError);
+      throw uploadError;
+    }
+    
+    const { data: urlData } = supabase.storage
+      .from('cvs')
+      .getPublicUrl(fileName);
+    
+    return urlData.publicUrl;
+  };
+
+  const handleCvDelete = async () => {
+    if (!user || !cvUrl) return;
+    
+    try {
+      const fileName = cvUrl.split('/').slice(-2).join('/');
+      const { error } = await supabase.storage
+        .from('cvs')
+        .remove([fileName]);
+      
+      if (error) throw error;
+      
+      setCvUrl(null);
+      setCvFile(null);
+      
+      toast({
+        title: "Success",
+        description: "CV deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting CV:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete CV",
+        variant: "destructive",
+      });
+    }
+  };
+  
   const handleSave = async () => {
     if (!name || selectedRoles.length === 0) {
       toast({
@@ -257,7 +314,14 @@ const WorkerProfile = () => {
     }
 
     setSaving(true);
+    setUploading(true);
     try {
+      // Upload CV if new file selected
+      let newCvUrl = cvUrl;
+      if (cvFile) {
+        newCvUrl = await handleCvUpload(cvFile);
+      }
+      
       const { data: profileData } = await supabase
         .from("profiles")
         .select("id")
@@ -283,7 +347,8 @@ const WorkerProfile = () => {
         total_hours_per_week: totalHoursPerWeek ? parseFloat(totalHoursPerWeek) : null,
         industries: selectedIndustries,
         company_sizes: selectedCompanySizes,
-        own_equipment: ownEquipment
+        own_equipment: ownEquipment,
+        cv_url: newCvUrl
       };
 
       let workerProfileId = profileId;
@@ -393,6 +458,7 @@ const WorkerProfile = () => {
       });
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   };
   const toggleRole = (role: string) => {
@@ -623,6 +689,79 @@ const WorkerProfile = () => {
             </CardContent>
           </Card>
 
+          {/* CV Upload - Only visible in fully disclosed mode */}
+          {visibilityMode === "fully_disclosed" && (
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>CV / Resume</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cv-upload">Upload CV (PDF or Word)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Your CV will be visible to businesses when you're in fully disclosed mode. Max 10MB.
+                  </p>
+                  <Input
+                    id="cv-upload"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 10485760) {
+                          toast({
+                            title: "Error",
+                            description: "File size must be less than 10MB",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setCvFile(file);
+                      }
+                    }}
+                  />
+                </div>
+                
+                {cvFile && (
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-sm flex-1">{cvFile.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCvFile(null)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
+                
+                {cvUrl && !cvFile && (
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-sm flex-1">Current CV uploaded</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={cvUrl} target="_blank" rel="noopener noreferrer">
+                        View
+                      </a>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCvDelete}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Availability */}
           <Card className="shadow-soft">
             <CardHeader>
@@ -795,10 +934,10 @@ const WorkerProfile = () => {
 
           {/* Actions */}
           <div className="flex gap-4">
-            <Button onClick={handleSave} disabled={saving} className="flex-1">
-              {saving ? <>
+            <Button onClick={handleSave} disabled={saving || uploading} className="flex-1">
+              {(saving || uploading) ? <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  {uploading ? "Uploading..." : "Saving..."}
                 </> : <>
                   <Save className="h-4 w-4 mr-2" />
                   Save Profile
