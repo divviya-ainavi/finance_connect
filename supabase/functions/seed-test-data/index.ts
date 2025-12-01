@@ -672,16 +672,25 @@ Deno.serve(async (req) => {
     const connectionRequestsData: any[] = [];
     const reviewsData: any[] = [];
 
-    // Get profile IDs for workers and businesses
+    // Get ALL profile IDs for workers and businesses (not just newly created)
     const { data: workerProfiles } = await supabase
       .from("worker_profiles")
-      .select("id, profile_id")
-      .in("id", createdWorkerIds);
+      .select("id, profile_id, name");
 
     const { data: businessProfiles } = await supabase
       .from("business_profiles")
-      .select("id, profile_id")
-      .in("id", createdBusinessIds);
+      .select("id, profile_id, company_name");
+
+    // Create mappings for reviews
+    const workerIdToProfileId = new Map(
+      workerProfiles?.map(w => [w.id, w.profile_id]) || []
+    );
+    const businessIdToProfileId = new Map(
+      businessProfiles?.map(b => [b.id, b.profile_id]) || []
+    );
+    const workerIdToName = new Map(
+      workerProfiles?.map(w => [w.id, w.name]) || []
+    );
 
     if (workerProfiles && businessProfiles && workerProfiles.length > 0 && businessProfiles.length > 0) {
       // Create 15-20 connection requests with varied statuses
@@ -716,7 +725,7 @@ Deno.serve(async (req) => {
       } else {
         console.log(`Created ${insertedRequests?.length || 0} connection requests`);
 
-        // Create reviews for accepted connections
+        // Create reviews for accepted connections (max 2 per connection: 1 from business, 1 from worker)
         const acceptedRequests = insertedRequests?.filter((req: any) => req.status === "accepted") || [];
         
         const reviewTitles = [
@@ -745,33 +754,62 @@ Deno.serve(async (req) => {
           "demonstrated exceptional technical skills and professionalism throughout.",
         ];
 
-        for (let i = 0; i < Math.min(25, acceptedRequests.length * 2); i++) {
-          const request = acceptedRequests[i % acceptedRequests.length];
-          const isBusinessReview = i % 2 === 0;
-          const rating = 3.5 + (i % 4) * 0.5; // Varied ratings from 3.5 to 5.0
+        // Create reviews: for each connection, create 1-2 reviews (business and/or worker)
+        for (let i = 0; i < acceptedRequests.length; i++) {
+          const request = acceptedRequests[i];
           
-          const review = {
-            connection_request_id: request.id,
-            reviewer_profile_id: isBusinessReview ? request.business_profile_id : request.worker_profile_id,
-            reviewee_profile_id: isBusinessReview ? request.worker_profile_id : request.business_profile_id,
-            reviewer_type: isBusinessReview ? "business" : "worker",
-            rating: Math.round(rating),
-            title: reviewTitles[i % reviewTitles.length],
-            content: `${workerProfiles.find(w => w.id === request.worker_profile_id)?.id.substring(0, 8) || "They"} ${reviewContents[i % reviewContents.length]}`,
-            rating_categories: isBusinessReview ? {
-              communication: Math.round(rating),
-              quality_of_work: Math.min(5, Math.round(rating) + (i % 2)),
-              professionalism: Math.round(rating),
-              punctuality: Math.max(3, Math.round(rating) - (i % 2)),
-            } : {
-              communication: Math.round(rating),
-              clarity_of_requirements: Math.round(rating),
-              timeliness_of_payment: Math.min(5, Math.round(rating) + (i % 2)),
-              work_environment: Math.round(rating),
-            },
-          };
+          // Create business review (business reviewing worker)
+          if (i % 3 !== 2) { // Skip every third one to create variety
+            const workerName = workerIdToName.get(request.worker_profile_id) || "The worker";
+            const businessReviewerProfileId = businessIdToProfileId.get(request.business_profile_id);
+            const workerRevieweeProfileId = workerIdToProfileId.get(request.worker_profile_id);
+            
+            if (businessReviewerProfileId && workerRevieweeProfileId) {
+              const rating = 4 + (i % 2); // Ratings of 4 or 5
+              
+              reviewsData.push({
+                connection_request_id: request.id,
+                reviewer_profile_id: businessReviewerProfileId,
+                reviewee_profile_id: workerRevieweeProfileId,
+                reviewer_type: "business",
+                rating: rating,
+                title: reviewTitles[i % reviewTitles.length],
+                content: `${workerName} ${reviewContents[i % reviewContents.length]}`,
+                rating_categories: {
+                  communication: Math.max(3, Math.min(5, rating + (i % 3 - 1))),
+                  quality_of_work: Math.max(3, Math.min(5, rating + (i % 2))),
+                  professionalism: Math.max(3, Math.min(5, rating)),
+                  punctuality: Math.max(3, Math.min(5, rating - (i % 2))),
+                },
+              });
+            }
+          }
           
-          reviewsData.push(review);
+          // Create worker review (worker reviewing business)
+          if (i % 4 !== 3) { // Skip every fourth one to create variety
+            const workerReviewerProfileId = workerIdToProfileId.get(request.worker_profile_id);
+            const businessRevieweeProfileId = businessIdToProfileId.get(request.business_profile_id);
+            
+            if (workerReviewerProfileId && businessRevieweeProfileId) {
+              const rating = 4 + ((i + 1) % 2); // Ratings of 4 or 5
+              
+              reviewsData.push({
+                connection_request_id: request.id,
+                reviewer_profile_id: workerReviewerProfileId,
+                reviewee_profile_id: businessRevieweeProfileId,
+                reviewer_type: "worker",
+                rating: rating,
+                title: "Great client to work with",
+                content: "Professional environment and clear communication. Payment was always on time.",
+                rating_categories: {
+                  communication: Math.max(3, Math.min(5, rating)),
+                  clarity_of_requirements: Math.max(3, Math.min(5, rating + (i % 2))),
+                  timeliness_of_payment: Math.max(3, Math.min(5, rating + (i % 3 - 1))),
+                  work_environment: Math.max(3, Math.min(5, rating - (i % 2))),
+                },
+              });
+            }
+          }
         }
 
         // Insert reviews
