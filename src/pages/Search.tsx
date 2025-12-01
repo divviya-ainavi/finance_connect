@@ -22,11 +22,15 @@ interface WorkerProfile {
   industries: string[];
   systems: string[];
   available_from: string | null;
+  hourly_rate_min: number | null;
+  hourly_rate_max: number | null;
   verification_statuses?: {
     testing_status: string;
     references_status: string;
     interview_status: string;
   };
+  average_rating?: number;
+  review_count?: number;
 }
 
 const Search = () => {
@@ -40,6 +44,9 @@ const Search = () => {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [locationFilter, setLocationFilter] = useState("");
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("any");
+  const [minRate, setMinRate] = useState("");
+  const [maxRate, setMaxRate] = useState("");
+  const [recommendedCandidates, setRecommendedCandidates] = useState<WorkerProfile[]>([]);
 
   useEffect(() => {
     fetchCandidates();
@@ -47,7 +54,13 @@ const Search = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [candidates, searchTerm, roleFilter, locationFilter, availabilityFilter]);
+  }, [candidates, searchTerm, roleFilter, locationFilter, availabilityFilter, minRate, maxRate]);
+
+  useEffect(() => {
+    if (user && userType === "business") {
+      calculateRecommended();
+    }
+  }, [candidates, user, userType]);
 
   const fetchCandidates = async () => {
     try {
@@ -60,7 +73,34 @@ const Search = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setCandidates(data || []);
+
+      // Fetch review stats for each worker
+      const workersWithReviews = await Promise.all(
+        (data || []).map(async (worker) => {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", worker.profile_id)
+            .single();
+
+          if (profileData) {
+            const { data: reviews } = await supabase
+              .from("reviews")
+              .select("rating")
+              .eq("reviewee_profile_id", profileData.id);
+
+            const average_rating = reviews && reviews.length > 0
+              ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+              : 0;
+            const review_count = reviews?.length || 0;
+
+            return { ...worker, average_rating, review_count };
+          }
+          return { ...worker, average_rating: 0, review_count: 0 };
+        })
+      );
+
+      setCandidates(workersWithReviews);
     } catch (error) {
       console.error("Error fetching candidates:", error);
     } finally {
@@ -95,7 +135,7 @@ const Search = () => {
     if (availabilityFilter && availabilityFilter !== "any") {
       const now = new Date();
       filtered = filtered.filter((c) => {
-        if (!c.available_from) return true; // No available_from = available immediately
+        if (!c.available_from) return true;
         const availableDate = new Date(c.available_from);
         
         if (availabilityFilter === "now") return availableDate <= now;
@@ -115,7 +155,56 @@ const Search = () => {
       });
     }
 
+    // Rate filter (overlap check)
+    if (minRate || maxRate) {
+      filtered = filtered.filter((c) => {
+        const workerMin = c.hourly_rate_min || 0;
+        const workerMax = c.hourly_rate_max || 999;
+        const searchMin = minRate ? parseFloat(minRate) : 0;
+        const searchMax = maxRate ? parseFloat(maxRate) : 999;
+        return workerMin <= searchMax && workerMax >= searchMin;
+      });
+    }
+
     setFilteredCandidates(filtered);
+  };
+
+  const calculateRecommended = () => {
+    const scored = candidates.map((c) => {
+      let score = 0;
+      
+      // Rating boost (30%)
+      if (c.average_rating) {
+        score += (c.average_rating / 5) * 30;
+      }
+      
+      // Availability boost (20%)
+      if (!c.available_from || new Date(c.available_from) <= new Date()) {
+        score += 20;
+      }
+      
+      // Verification boost (15%)
+      const verifications = getVerificationCount(c);
+      score += (verifications / 3) * 15;
+      
+      // Rate reasonableness (20%)
+      if (c.hourly_rate_min && c.hourly_rate_min <= 35) {
+        score += 20;
+      }
+      
+      // Review count boost (15%)
+      if (c.review_count && c.review_count > 0) {
+        score += Math.min(15, c.review_count * 3);
+      }
+      
+      return { ...c, matchScore: score };
+    });
+
+    const top = scored
+      .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
+      .slice(0, 4);
+    
+    setRecommendedCandidates(top);
   };
 
   const getDisplayName = (candidate: WorkerProfile) => {
@@ -200,7 +289,7 @@ const Search = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-6 gap-4">
               <div>
                 <Label htmlFor="search">Skills or Systems</Label>
                 <Input
@@ -252,9 +341,81 @@ const Search = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label htmlFor="minRate">Min Rate (£/hr)</Label>
+                <Input
+                  id="minRate"
+                  type="number"
+                  placeholder="15"
+                  value={minRate}
+                  onChange={(e) => setMinRate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="maxRate">Max Rate (£/hr)</Label>
+                <Input
+                  id="maxRate"
+                  type="number"
+                  placeholder="50"
+                  value={maxRate}
+                  onChange={(e) => setMaxRate(e.target.value)}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Recommended for You */}
+        {user && userType === "business" && recommendedCandidates.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+              <h2 className="text-2xl font-semibold">Recommended for You</h2>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {recommendedCandidates.map((candidate) => (
+                <Card 
+                  key={candidate.id} 
+                  className="shadow-soft hover:shadow-medium transition-shadow cursor-pointer border-primary/20"
+                  onClick={() => handleCandidateClick(candidate.id)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between mb-2">
+                      <CardTitle className="text-base">
+                        {getDisplayName(candidate)}
+                      </CardTitle>
+                      <Badge variant="secondary" className="text-xs">Best Match</Badge>
+                    </div>
+                    <CardDescription className="flex items-center gap-1 text-xs">
+                      <MapPin className="h-3 w-3" />
+                      {candidate.location}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {candidate.average_rating && candidate.average_rating > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        <span className="text-sm font-medium">{candidate.average_rating.toFixed(1)}</span>
+                        <span className="text-xs text-muted-foreground">({candidate.review_count})</span>
+                      </div>
+                    )}
+                    {candidate.hourly_rate_min && candidate.hourly_rate_max && (
+                      <p className="text-xs text-muted-foreground">
+                        £{candidate.hourly_rate_min}-{candidate.hourly_rate_max}/hr
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <CheckCircle className="h-3 w-3 text-accent" />
+                      <span className="text-xs text-muted-foreground">
+                        {getVerificationCount(candidate)}/3 Verified
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Results */}
         <div className="mb-4 text-sm text-muted-foreground">
@@ -286,10 +447,24 @@ const Search = () => {
                       {getAvailabilityText(candidate)}
                     </Badge>
                   </div>
-                  <CardDescription className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {candidate.location || "Location not specified"}
-                  </CardDescription>
+                  <div className="space-y-1">
+                    <CardDescription className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {candidate.location || "Location not specified"}
+                    </CardDescription>
+                    {candidate.average_rating && candidate.average_rating > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                        <span className="text-sm font-medium">{candidate.average_rating.toFixed(1)}</span>
+                        <span className="text-xs text-muted-foreground">({candidate.review_count} reviews)</span>
+                      </div>
+                    )}
+                    {candidate.hourly_rate_min && candidate.hourly_rate_max && (
+                      <p className="text-sm font-medium text-primary">
+                        £{candidate.hourly_rate_min}-{candidate.hourly_rate_max}/hr
+                      </p>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {candidate.roles && candidate.roles.length > 0 && (
