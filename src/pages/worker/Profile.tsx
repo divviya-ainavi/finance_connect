@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Loader2, Save, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { RateExpectations } from "@/components/worker/RateExpectations";
+import { SkillsMatrix } from "@/components/worker/SkillsMatrix";
+import { SystemsProficiency } from "@/components/worker/SystemsProficiency";
+import { LanguagesSection } from "@/components/worker/LanguagesSection";
+import { QualificationsSection } from "@/components/worker/QualificationsSection";
 const ROLES = [{
   value: "accounts_payable",
   label: "Accounts Payable"
@@ -34,10 +38,20 @@ const ROLES = [{
 }, {
   value: "financial_controller",
   label: "Financial Controller"
+}, {
+  value: "finance_manager",
+  label: "Finance Manager"
+}, {
+  value: "cfo_fpa",
+  label: "CFO / FP&A"
 }];
-const SYSTEMS = ["Xero", "Sage", "QuickBooks", "SAP", "Oracle", "Excel", "NetSuite", "Dynamics"];
-const INDUSTRIES = ["Professional Services", "Retail", "Manufacturing", "Technology", "Healthcare", "Finance"];
-const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-500", "500+"];
+const INDUSTRIES = ["Professional Services", "Retail", "Manufacturing", "Technology", "Healthcare", "Finance", "Construction", "Hospitality", "Non-profit"];
+const COMPANY_SIZES = [
+  { value: "micro", label: "Micro (1-10)" },
+  { value: "sme", label: "SME (10-250)" },
+  { value: "mid_large", label: "Mid/Large (250+)" },
+  { value: "multi_entity", label: "Multi-entity groups" }
+];
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const TIME_SLOTS = ["AM", "PM", "Evening"];
 const WorkerProfile = () => {
@@ -54,20 +68,41 @@ const WorkerProfile = () => {
   const [saving, setSaving] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
 
-  // Form state
+  // Form state - Basic
   const [name, setName] = useState("");
   const [pseudonym, setPseudonym] = useState("");
   const [visibilityMode, setVisibilityMode] = useState<"anonymous" | "fully_disclosed">("anonymous");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  
+  // Rate expectations
+  const [rateMin, setRateMin] = useState(0);
+  const [rateMax, setRateMax] = useState(0);
+  const [rateNegotiable, setRateNegotiable] = useState(false);
+  
+  // Location & Travel
   const [location, setLocation] = useState("");
+  const [locationMode, setLocationMode] = useState<"distance" | "time">("distance");
   const [maxCommuteKm, setMaxCommuteKm] = useState("");
+  const [travelTimeMinutes, setTravelTimeMinutes] = useState("");
+  const [locationConstraints, setLocationConstraints] = useState("");
   const [onsitePreference, setOnsitePreference] = useState<string>("");
   const [maxDaysOnsite, setMaxDaysOnsite] = useState("");
+  
+  // Availability
   const [availability, setAvailability] = useState<Record<string, string[]>>({});
-  const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
+  const [totalHoursPerWeek, setTotalHoursPerWeek] = useState("");
+  
+  // Skills, Systems, Languages, Qualifications
+  const [skills, setSkills] = useState<Record<string, number>>({});
+  const [systems, setSystems] = useState<Record<string, number>>({});
+  const [languages, setLanguages] = useState<Array<{ name: string; written: string; spoken: string }>>([]);
+  const [qualifications, setQualifications] = useState<Array<{ type: string; details: string; year: number | null }>>([]);
+  
+  // Industries & Company Sizes
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
-  const [qualifications, setQualifications] = useState("");
+  
+  // Equipment
   const [ownEquipment, setOwnEquipment] = useState(false);
   useEffect(() => {
     if (!authLoading && (!user || userType !== "worker")) {
@@ -80,31 +115,108 @@ const WorkerProfile = () => {
   }, [user, userType, authLoading, navigate]);
   const fetchProfile = async () => {
     try {
-      const {
-        data: profileData
-      } = await supabase.from("profiles").select("id").eq("user_id", user!.id).single();
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user!.id)
+        .single();
+      
       if (!profileData) return;
-      const {
-        data,
-        error
-      } = await supabase.from("worker_profiles").select("*").eq("profile_id", profileData.id).single();
+
+      // Fetch worker profile
+      const { data, error } = await supabase
+        .from("worker_profiles")
+        .select("*")
+        .eq("profile_id", profileData.id)
+        .single();
+
       if (error) throw error;
+
       if (data) {
         setProfileId(data.id);
         setName(data.name || "");
         setPseudonym(data.pseudonym || "");
         setVisibilityMode(data.visibility_mode || "anonymous");
         setSelectedRoles(data.roles || []);
+        
+        // Rate expectations
+        setRateMin(data.hourly_rate_min || 0);
+        setRateMax(data.hourly_rate_max || 0);
+        setRateNegotiable(data.rate_negotiable || false);
+        
+        // Location
         setLocation(data.location || "");
         setMaxCommuteKm(data.max_commute_km?.toString() || "");
+        setTravelTimeMinutes(data.travel_time_minutes?.toString() || "");
+        setLocationConstraints(data.location_constraints || "");
+        setLocationMode(data.travel_time_minutes ? "time" : "distance");
         setOnsitePreference(data.onsite_preference || "");
         setMaxDaysOnsite(data.max_days_onsite?.toString() || "");
+        
+        // Availability
         setAvailability(data.availability as Record<string, string[]> || {});
-        setSelectedSystems(data.systems || []);
+        setTotalHoursPerWeek(data.total_hours_per_week?.toString() || "");
+        
+        // Industries & Company Sizes
         setSelectedIndustries(data.industries || []);
         setSelectedCompanySizes(data.company_sizes || []);
-        setQualifications(data.qualifications || "");
         setOwnEquipment(data.own_equipment || false);
+
+        // Fetch skills
+        const { data: skillsData } = await supabase
+          .from("worker_skills")
+          .select("*")
+          .eq("worker_profile_id", data.id);
+        
+        if (skillsData) {
+          const skillsMap: Record<string, number> = {};
+          skillsData.forEach(skill => {
+            skillsMap[skill.skill_name] = skill.skill_level;
+          });
+          setSkills(skillsMap);
+        }
+
+        // Fetch system proficiency
+        const { data: systemsData } = await supabase
+          .from("worker_system_proficiency")
+          .select("*")
+          .eq("worker_profile_id", data.id);
+        
+        if (systemsData) {
+          const systemsMap: Record<string, number> = {};
+          systemsData.forEach(sys => {
+            systemsMap[sys.system_name] = sys.proficiency_level;
+          });
+          setSystems(systemsMap);
+        }
+
+        // Fetch languages
+        const { data: languagesData } = await supabase
+          .from("worker_languages")
+          .select("*")
+          .eq("worker_profile_id", data.id);
+        
+        if (languagesData) {
+          setLanguages(languagesData.map(lang => ({
+            name: lang.language_name,
+            written: lang.written_level || "basic",
+            spoken: lang.spoken_level || "basic"
+          })));
+        }
+
+        // Fetch qualifications
+        const { data: qualsData } = await supabase
+          .from("worker_qualifications")
+          .select("*")
+          .eq("worker_profile_id", data.id);
+        
+        if (qualsData) {
+          setQualifications(qualsData.map(qual => ({
+            type: qual.qualification_type,
+            details: qual.details || "",
+            year: qual.year_obtained
+          })));
+        }
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -114,18 +226,24 @@ const WorkerProfile = () => {
   };
   const calculateProgress = () => {
     let completed = 0;
-    const total = 10;
+    const total = 14;
+    
     if (name) completed++;
     if (selectedRoles.length > 0) completed++;
+    if (rateMin > 0 && rateMax > 0) completed++;
     if (location) completed++;
     if (onsitePreference) completed++;
     if (Object.keys(availability).length > 0) completed++;
-    if (selectedSystems.length > 0) completed++;
+    if (totalHoursPerWeek) completed++;
+    if (Object.keys(skills).length > 0) completed++;
+    if (Object.keys(systems).length > 0) completed++;
     if (selectedIndustries.length > 0) completed++;
     if (selectedCompanySizes.length > 0) completed++;
-    if (qualifications) completed++;
+    if (qualifications.length > 0) completed++;
+    if (languages.length > 0) completed++;
     if (visibilityMode === "anonymous" ? pseudonym : true) completed++;
-    return completed / total * 100;
+    
+    return (completed / total) * 100;
   };
   const handleSave = async () => {
     if (!name || selectedRoles.length === 0) {
@@ -136,39 +254,130 @@ const WorkerProfile = () => {
       });
       return;
     }
+
     setSaving(true);
     try {
-      const {
-        data: profileData
-      } = await supabase.from("profiles").select("id").eq("user_id", user!.id).single();
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user!.id)
+        .single();
+
       const profilePayload = {
         profile_id: profileData!.id,
         name,
         pseudonym: visibilityMode === "anonymous" ? pseudonym : null,
         visibility_mode: visibilityMode,
         roles: selectedRoles as any,
+        hourly_rate_min: rateMin || null,
+        hourly_rate_max: rateMax || null,
+        rate_negotiable: rateNegotiable,
         location,
-        max_commute_km: maxCommuteKm ? parseInt(maxCommuteKm) : null,
+        max_commute_km: locationMode === "distance" && maxCommuteKm ? parseInt(maxCommuteKm) : null,
+        travel_time_minutes: locationMode === "time" && travelTimeMinutes ? parseInt(travelTimeMinutes) : null,
+        location_constraints: locationConstraints || null,
         onsite_preference: onsitePreference as any || null,
         max_days_onsite: maxDaysOnsite ? parseInt(maxDaysOnsite) : null,
         availability,
-        systems: selectedSystems,
+        total_hours_per_week: totalHoursPerWeek ? parseFloat(totalHoursPerWeek) : null,
         industries: selectedIndustries,
         company_sizes: selectedCompanySizes,
-        qualifications,
         own_equipment: ownEquipment
       };
+
+      let workerProfileId = profileId;
+
       if (profileId) {
-        const {
-          error
-        } = await supabase.from("worker_profiles").update(profilePayload).eq("id", profileId);
+        const { error } = await supabase
+          .from("worker_profiles")
+          .update(profilePayload)
+          .eq("id", profileId);
         if (error) throw error;
       } else {
-        const {
-          error
-        } = await supabase.from("worker_profiles").insert([profilePayload]);
+        const { data: newProfile, error } = await supabase
+          .from("worker_profiles")
+          .insert([profilePayload])
+          .select()
+          .single();
         if (error) throw error;
+        workerProfileId = newProfile.id;
+        setProfileId(workerProfileId);
       }
+
+      // Save skills
+      if (workerProfileId) {
+        // Delete existing skills
+        await supabase
+          .from("worker_skills")
+          .delete()
+          .eq("worker_profile_id", workerProfileId);
+
+        // Insert new skills
+        const skillsToInsert = Object.entries(skills)
+          .filter(([_, level]) => level > 0)
+          .map(([skillName, level]) => ({
+            worker_profile_id: workerProfileId,
+            skill_name: skillName,
+            skill_level: level
+          }));
+
+        if (skillsToInsert.length > 0) {
+          await supabase.from("worker_skills").insert(skillsToInsert);
+        }
+
+        // Save system proficiency
+        await supabase
+          .from("worker_system_proficiency")
+          .delete()
+          .eq("worker_profile_id", workerProfileId);
+
+        const systemsToInsert = Object.entries(systems)
+          .filter(([_, level]) => level > 0)
+          .map(([systemName, level]) => ({
+            worker_profile_id: workerProfileId,
+            system_name: systemName,
+            proficiency_level: level
+          }));
+
+        if (systemsToInsert.length > 0) {
+          await supabase.from("worker_system_proficiency").insert(systemsToInsert);
+        }
+
+        // Save languages
+        await supabase
+          .from("worker_languages")
+          .delete()
+          .eq("worker_profile_id", workerProfileId);
+
+        const languagesToInsert = languages.map(lang => ({
+          worker_profile_id: workerProfileId,
+          language_name: lang.name,
+          written_level: lang.written,
+          spoken_level: lang.spoken
+        }));
+
+        if (languagesToInsert.length > 0) {
+          await supabase.from("worker_languages").insert(languagesToInsert);
+        }
+
+        // Save qualifications
+        await supabase
+          .from("worker_qualifications")
+          .delete()
+          .eq("worker_profile_id", workerProfileId);
+
+        const qualsToInsert = qualifications.map(qual => ({
+          worker_profile_id: workerProfileId,
+          qualification_type: qual.type as any,
+          details: qual.details || null,
+          year_obtained: qual.year
+        }));
+
+        if (qualsToInsert.length > 0) {
+          await supabase.from("worker_qualifications").insert(qualsToInsert);
+        }
+      }
+
       toast({
         title: "Profile saved",
         description: "Your profile has been updated successfully."
@@ -186,25 +395,30 @@ const WorkerProfile = () => {
     }
   };
   const toggleRole = (role: string) => {
-    setSelectedRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
+    setSelectedRoles(prev => 
+      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+    );
   };
-  const toggleSystem = (system: string) => {
-    setSelectedSystems(prev => prev.includes(system) ? prev.filter(s => s !== system) : [...prev, system]);
-  };
+
   const toggleIndustry = (industry: string) => {
-    setSelectedIndustries(prev => prev.includes(industry) ? prev.filter(i => i !== industry) : [...prev, industry]);
+    setSelectedIndustries(prev => 
+      prev.includes(industry) ? prev.filter(i => i !== industry) : [...prev, industry]
+    );
   };
+
   const toggleCompanySize = (size: string) => {
-    setSelectedCompanySizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
+    setSelectedCompanySizes(prev => 
+      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
+    );
   };
+
   const toggleAvailability = (day: string, slot: string) => {
     setAvailability(prev => {
       const daySlots = prev[day] || [];
-      const updated = daySlots.includes(slot) ? daySlots.filter(s => s !== slot) : [...daySlots, slot];
-      return {
-        ...prev,
-        [day]: updated
-      };
+      const updated = daySlots.includes(slot) 
+        ? daySlots.filter(s => s !== slot) 
+        : [...daySlots, slot];
+      return { ...prev, [day]: updated };
     });
   };
   if (authLoading || loading) {
@@ -274,36 +488,110 @@ const WorkerProfile = () => {
           {/* Roles */}
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle>Capabilities</CardTitle>
+              <CardTitle>Roles Offered *</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {ROLES.map(role => <Badge key={role.value} variant={selectedRoles.includes(role.value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleRole(role.value)}>
+                {ROLES.map(role => (
+                  <Badge
+                    key={role.value}
+                    variant={selectedRoles.includes(role.value) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleRole(role.value)}
+                  >
                     {role.label}
-                  </Badge>)}
+                  </Badge>
+                ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Location */}
+          {/* Rate Expectations */}
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle>Location & Commute</CardTitle>
+              <CardTitle>Rate Expectations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RateExpectations
+                rateMin={rateMin}
+                rateMax={rateMax}
+                negotiable={rateNegotiable}
+                onRateMinChange={setRateMin}
+                onRateMaxChange={setRateMax}
+                onNegotiableChange={setRateNegotiable}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Location & Travel */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle>Location & Travel Preferences</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="location">Location</Label>
-                <Input id="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="City or region" />
+                <Label htmlFor="location">Home Base Location</Label>
+                <Input
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="City or postcode"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Maximum Commute</Label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={locationMode === "distance"}
+                      onChange={() => setLocationMode("distance")}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">Distance</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={locationMode === "time"}
+                      onChange={() => setLocationMode("time")}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">Travel Time</span>
+                  </label>
+                </div>
+
+                {locationMode === "distance" ? (
+                  <Input
+                    type="number"
+                    value={maxCommuteKm}
+                    onChange={(e) => setMaxCommuteKm(e.target.value)}
+                    placeholder="e.g., 25 km"
+                  />
+                ) : (
+                  <Input
+                    type="number"
+                    value={travelTimeMinutes}
+                    onChange={(e) => setTravelTimeMinutes(e.target.value)}
+                    placeholder="e.g., 30 minutes"
+                  />
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="locationConstraints">Location Constraints (optional)</Label>
+                <Input
+                  id="locationConstraints"
+                  value={locationConstraints}
+                  onChange={(e) => setLocationConstraints(e.target.value)}
+                  placeholder='e.g., "Only South London" or "Croydon area"'
+                />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="commute">Max Commute (km)</Label>
-                  <Input id="commute" type="number" value={maxCommuteKm} onChange={e => setMaxCommuteKm(e.target.value)} placeholder="25" />
-                </div>
-
-                <div>
-                  <Label htmlFor="onsite">Onsite Preference</Label>
+                  <Label htmlFor="onsite">Remote/Onsite Preference</Label>
                   <Select value={onsitePreference} onValueChange={setOnsitePreference}>
                     <SelectTrigger id="onsite">
                       <SelectValue placeholder="Select preference" />
@@ -311,16 +599,26 @@ const WorkerProfile = () => {
                     <SelectContent>
                       <SelectItem value="fully_remote">Fully Remote</SelectItem>
                       <SelectItem value="hybrid">Hybrid</SelectItem>
-                      <SelectItem value="onsite">Onsite</SelectItem>
+                      <SelectItem value="onsite">Onsite Only</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              {onsitePreference === "hybrid" && <div>
-                  <Label htmlFor="maxDays">Max Days Onsite Per Week</Label>
-                  <Input id="maxDays" type="number" value={maxDaysOnsite} onChange={e => setMaxDaysOnsite(e.target.value)} placeholder="2" />
-                </div>}
+                {(onsitePreference === "hybrid" || onsitePreference === "onsite") && (
+                  <div>
+                    <Label htmlFor="maxDays">Max Days Onsite Per Week</Label>
+                    <Input
+                      id="maxDays"
+                      type="number"
+                      value={maxDaysOnsite}
+                      onChange={(e) => setMaxDaysOnsite(e.target.value)}
+                      placeholder="e.g., 2"
+                      min="1"
+                      max="5"
+                    />
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -329,44 +627,95 @@ const WorkerProfile = () => {
             <CardHeader>
               <CardTitle>Weekly Availability</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {DAYS.map(day => <div key={day} className="flex items-center gap-4">
-                    <div className="w-24 text-sm font-medium">{day}</div>
-                    <div className="flex gap-2">
-                      {TIME_SLOTS.map(slot => <Badge key={slot} variant={availability[day]?.includes(slot) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleAvailability(day, slot)}>
-                          {slot}
-                        </Badge>)}
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="totalHours">Total Hours Available Per Week</Label>
+                <Input
+                  id="totalHours"
+                  type="number"
+                  value={totalHoursPerWeek}
+                  onChange={(e) => setTotalHoursPerWeek(e.target.value)}
+                  placeholder="e.g., 20"
+                  step="0.5"
+                />
+              </div>
+
+              <div>
+                <Label className="mb-3 block">Weekly Recurring Availability</Label>
+                <div className="space-y-2">
+                  {DAYS.map((day) => (
+                    <div key={day} className="flex items-center gap-4">
+                      <div className="w-24 text-sm font-medium">{day}</div>
+                      <div className="flex gap-2">
+                        {TIME_SLOTS.map((slot) => (
+                          <Badge
+                            key={slot}
+                            variant={availability[day]?.includes(slot) ? "default" : "outline"}
+                            className="cursor-pointer"
+                            onClick={() => toggleAvailability(day, slot)}
+                          >
+                            {slot}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>)}
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Systems */}
+          {/* Skills Matrix */}
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle>Systems & Software</CardTitle>
+              <CardTitle>Skills Assessment</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Rate your proficiency in each skill (0 = No experience, 4 = Expert)
+              </p>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {SYSTEMS.map(system => <Badge key={system} variant={selectedSystems.includes(system) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleSystem(system)}>
-                    {system}
-                  </Badge>)}
-              </div>
+              <SkillsMatrix skills={skills} onSkillChange={(skill, level) => setSkills(prev => ({ ...prev, [skill]: level }))} />
+            </CardContent>
+          </Card>
+
+          {/* Systems & Tools */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle>Systems & Software Proficiency</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Rate your proficiency with each system (0 = None, 4 = Expert)
+              </p>
+            </CardHeader>
+            <CardContent>
+              <SystemsProficiency
+                systems={systems}
+                onSystemChange={(system, level) => setSystems(prev => ({ ...prev, [system]: level }))}
+                onSystemRemove={(system) => setSystems(prev => {
+                  const updated = { ...prev };
+                  delete updated[system];
+                  return updated;
+                })}
+              />
             </CardContent>
           </Card>
 
           {/* Industries */}
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle>Industries</CardTitle>
+              <CardTitle>Industry Experience</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {INDUSTRIES.map(industry => <Badge key={industry} variant={selectedIndustries.includes(industry) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleIndustry(industry)}>
+                {INDUSTRIES.map((industry) => (
+                  <Badge
+                    key={industry}
+                    variant={selectedIndustries.includes(industry) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleIndustry(industry)}
+                  >
                     {industry}
-                  </Badge>)}
+                  </Badge>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -378,29 +727,64 @@ const WorkerProfile = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {COMPANY_SIZES.map(size => <Badge key={size} variant={selectedCompanySizes.includes(size) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleCompanySize(size)}>
-                    {size} employees
-                  </Badge>)}
+                {COMPANY_SIZES.map((size) => (
+                  <Badge
+                    key={size.value}
+                    variant={selectedCompanySizes.includes(size.value) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleCompanySize(size.value)}
+                  >
+                    {size.label}
+                  </Badge>
+                ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Additional Info */}
+          {/* Qualifications */}
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
+              <CardTitle>Qualifications</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="qualifications">Qualifications</Label>
-                <Textarea id="qualifications" value={qualifications} onChange={e => setQualifications(e.target.value)} placeholder="e.g., AAT Level 4, ACCA Part-Qualified" rows={3} />
-              </div>
+            <CardContent>
+              <QualificationsSection
+                qualifications={qualifications}
+                onQualificationAdd={(qual) => setQualifications(prev => [...prev, qual])}
+                onQualificationRemove={(index) => setQualifications(prev => prev.filter((_, i) => i !== index))}
+              />
+            </CardContent>
+          </Card>
 
+          {/* Languages */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle>Languages</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LanguagesSection
+                languages={languages}
+                onLanguageAdd={(lang) => setLanguages(prev => [...prev, lang])}
+                onLanguageRemove={(index) => setLanguages(prev => prev.filter((_, i) => i !== index))}
+                onLanguageChange={(index, field, value) => {
+                  setLanguages(prev => prev.map((lang, i) => 
+                    i === index ? { ...lang, [field]: value } : lang
+                  ));
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Equipment */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle>Equipment & Resources</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
                   <Label>Own Equipment</Label>
                   <p className="text-sm text-muted-foreground">
-                    I have my own computer and software
+                    I have my own computer and necessary software
                   </p>
                 </div>
                 <Switch checked={ownEquipment} onCheckedChange={setOwnEquipment} />
