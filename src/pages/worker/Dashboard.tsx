@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Loader2, CheckCircle, Clock, FileText, User, LogOut } from "lucide-react";
+import { Briefcase, Loader2, CheckCircle, Clock, FileText, User, LogOut, Star, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import ReviewForm from "@/components/reviews/ReviewForm";
 
 interface WorkerProfile {
   id: string;
@@ -29,8 +30,10 @@ interface ConnectionRequest {
   hours_per_week: number;
   status: string;
   created_at: string;
+  business_profile_id: string;
   business_profiles: {
     company_name: string;
+    profile_id: string;
   };
 }
 
@@ -44,6 +47,10 @@ const WorkerDashboard = () => {
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [acceptedRequests, setAcceptedRequests] = useState<ConnectionRequest[]>([]);
   const [profileCompletion, setProfileCompletion] = useState(0);
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
+  const [averageRating, setAverageRating] = useState<number>(0);
+  const [reviewCount, setReviewCount] = useState<number>(0);
 
   useEffect(() => {
     if (user) {
@@ -85,7 +92,7 @@ const WorkerDashboard = () => {
             .from("connection_requests")
             .select(`
               *,
-              business_profiles (company_name)
+              business_profiles (company_name, profile_id)
             `)
             .eq("worker_profile_id", workerProfile.id)
             .eq("status", "pending")
@@ -98,13 +105,33 @@ const WorkerDashboard = () => {
             .from("connection_requests")
             .select(`
               *,
-              business_profiles (company_name)
+              business_profiles (company_name, profile_id)
             `)
             .eq("worker_profile_id", workerProfile.id)
             .eq("status", "accepted")
             .order("updated_at", { ascending: false });
 
           setAcceptedRequests(acceptedData || []);
+
+          // Fetch worker profile reviews
+          const { data: profileData2 } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", user?.id)
+            .single();
+
+          if (profileData2) {
+            const { data: reviewsData, count } = await supabase
+              .from("reviews")
+              .select("rating", { count: "exact" })
+              .eq("reviewee_profile_id", profileData2.id);
+
+            if (reviewsData && reviewsData.length > 0) {
+              const avg = reviewsData.reduce((acc, r) => acc + r.rating, 0) / reviewsData.length;
+              setAverageRating(avg);
+            }
+            setReviewCount(count || 0);
+          }
         }
       }
     } catch (error) {
@@ -180,6 +207,70 @@ const WorkerDashboard = () => {
     };
     const config = statusMap[status] || statusMap.not_started;
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const handleSubmitReview = async (reviewData: {
+    rating: number;
+    title: string;
+    content: string;
+    ratingCategories: Record<string, number>;
+  }) => {
+    if (!selectedConnection) return;
+
+    try {
+      const connection = acceptedRequests.find((r) => r.id === selectedConnection);
+      if (!connection) return;
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (!profileData) return;
+
+      const { data: workerProfile } = await supabase
+        .from("worker_profiles")
+        .select("profile_id")
+        .eq("profile_id", profileData.id)
+        .single();
+
+      const { data: businessProfile } = await supabase
+        .from("business_profiles")
+        .select("profile_id")
+        .eq("id", connection.business_profile_id)
+        .single();
+
+      if (!workerProfile || !businessProfile) return;
+
+      const { error } = await supabase.from("reviews").insert({
+        connection_request_id: selectedConnection,
+        reviewer_profile_id: workerProfile.profile_id,
+        reviewee_profile_id: businessProfile.profile_id,
+        reviewer_type: "worker",
+        rating: reviewData.rating,
+        title: reviewData.title || null,
+        content: reviewData.content,
+        rating_categories: reviewData.ratingCategories,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Review submitted",
+        description: "Thank you for your feedback!",
+      });
+
+      setReviewFormOpen(false);
+      setSelectedConnection(null);
+      fetchDashboardData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -277,20 +368,53 @@ const WorkerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
+          {/* Reviews Summary */}
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Manage your account</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                My Reviews
+              </CardTitle>
+              <CardDescription>Your reputation score</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => navigate("/search")}
-              >
-                Browse Opportunities
-              </Button>
+            <CardContent className="space-y-4">
+              {reviewCount > 0 ? (
+                <>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold mb-1">
+                      {averageRating.toFixed(1)}
+                    </div>
+                    <div className="flex justify-center mb-1">
+                      <div className="flex gap-1">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < Math.round(averageRating)
+                                ? "fill-accent text-accent"
+                                : "text-muted"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {reviewCount} review{reviewCount !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate(`/reviews/worker/${profile?.id}`)}
+                  >
+                    View All Reviews
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No reviews yet. Complete work to receive reviews from businesses.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -383,12 +507,40 @@ const WorkerDashboard = () => {
                       <p className="text-xs text-muted-foreground">
                         Connected on {new Date(request.created_at).toLocaleDateString()}
                       </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => {
+                          setSelectedConnection(request.id);
+                          setReviewFormOpen(true);
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Leave Review
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Review Form Dialog */}
+        {reviewFormOpen && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <ReviewForm
+                reviewerType="worker"
+                onSubmit={handleSubmitReview}
+                onCancel={() => {
+                  setReviewFormOpen(false);
+                  setSelectedConnection(null);
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
