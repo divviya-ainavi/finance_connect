@@ -15,6 +15,7 @@ import BusinessDashboard from "./pages/business/Dashboard";
 import BusinessShortlist from "./pages/business/Shortlist";
 import CandidateDetail from "./pages/CandidateDetail";
 import ResetPassword from "./pages/ResetPassword";
+import Reviews from "./pages/Reviews";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/business/dashboard" element={<BusinessDashboard />} />
             <Route path="/business/shortlist" element={<BusinessShortlist />} />
             <Route path="/candidate/:id" element={<CandidateDetail />} />
+            <Route path="/reviews/:profileType/:profileId" element={<Reviews />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

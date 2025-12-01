@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2 } from "lucide-react";
+import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import ReviewSummary from "@/components/reviews/ReviewSummary";
+import ReviewList from "@/components/reviews/ReviewList";
 
 interface WorkerProfile {
   id: string;
@@ -52,6 +54,8 @@ const CandidateDetail = () => {
   const [hoursPerWeek, setHoursPerWeek] = useState("");
   const [remoteOnsite, setRemoteOnsite] = useState("");
   const [rateOffered, setRateOffered] = useState("");
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [averageRating, setAverageRating] = useState(0);
 
   useEffect(() => {
     if (!authLoading && (!user || userType !== "business")) {
@@ -62,6 +66,7 @@ const CandidateDetail = () => {
     if (user && userType === "business" && id) {
       fetchWorkerProfile();
       checkIfShortlisted();
+      fetchReviews();
     }
   }, [user, userType, authLoading, id, navigate]);
 
@@ -122,6 +127,39 @@ const CandidateDetail = () => {
       setIsShortlisted(!!data);
     } catch (error) {
       console.error("Error checking shortlist:", error);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const { data: workerProfile } = await supabase
+        .from("worker_profiles")
+        .select("profile_id")
+        .eq("id", id!)
+        .single();
+
+      if (!workerProfile) return;
+
+      const { data } = await supabase
+        .from("reviews")
+        .select(`
+          *,
+          profiles!reviews_reviewer_profile_id_fkey (
+            business_profiles (company_name)
+          )
+        `)
+        .eq("reviewee_profile_id", workerProfile.profile_id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      setReviews(data || []);
+
+      if (data && data.length > 0) {
+        const avg = data.reduce((acc: number, r: any) => acc + r.rating, 0) / data.length;
+        setAverageRating(avg);
+      }
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
     }
   };
 
@@ -547,6 +585,50 @@ const CandidateDetail = () => {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Reviews Section */}
+          {reviews.length > 0 && (
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <ReviewSummary
+                    averageRating={averageRating}
+                    totalReviews={reviews.length}
+                    ratingDistribution={{
+                      1: reviews.filter((r) => Math.round(r.rating) === 1).length,
+                      2: reviews.filter((r) => Math.round(r.rating) === 2).length,
+                      3: reviews.filter((r) => Math.round(r.rating) === 3).length,
+                      4: reviews.filter((r) => Math.round(r.rating) === 4).length,
+                      5: reviews.filter((r) => Math.round(r.rating) === 5).length,
+                    }}
+                    onViewAll={() => navigate(`/reviews/worker/${id}`)}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Card className="shadow-soft">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5" />
+                        Recent Reviews
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ReviewList reviews={reviews} reviewerType="business" />
+                      {reviews.length >= 5 && (
+                        <Button
+                          variant="outline"
+                          className="w-full mt-4"
+                          onClick={() => navigate(`/reviews/worker/${id}`)}
+                        >
+                          View All Reviews
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

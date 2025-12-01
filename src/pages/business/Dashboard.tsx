@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Loader2, Search, Users, Clock, LogOut } from "lucide-react";
+import { Briefcase, Loader2, Search, Users, Clock, LogOut, Star, MessageSquare } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import ReviewForm from "@/components/reviews/ReviewForm";
 
 interface BusinessProfile {
   id: string;
@@ -17,20 +19,27 @@ interface ConnectionRequest {
   status: string;
   hours_per_week: number;
   created_at: string;
+  worker_profile_id: string;
   worker_profiles: {
     name: string;
     pseudonym: string;
     visibility_mode: string;
+    profile_id: string;
   };
 }
 
 const BusinessDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [shortlistCount, setShortlistCount] = useState(0);
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
+  const [averageRating, setAverageRating] = useState<number>(0);
+  const [reviewCount, setReviewCount] = useState<number>(0);
 
   useEffect(() => {
     if (user) {
@@ -61,7 +70,7 @@ const BusinessDashboard = () => {
             .from("connection_requests")
             .select(`
               *,
-              worker_profiles (name, pseudonym, visibility_mode)
+              worker_profiles (name, pseudonym, visibility_mode, profile_id)
             `)
             .eq("business_profile_id", businessProfile.id)
             .order("created_at", { ascending: false })
@@ -76,6 +85,26 @@ const BusinessDashboard = () => {
             .eq("business_profile_id", businessProfile.id);
 
           setShortlistCount(count || 0);
+
+          // Fetch business profile reviews
+          const { data: profileData2 } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", user?.id)
+            .single();
+
+          if (profileData2) {
+            const { data: reviewsData, count: reviewsCount } = await supabase
+              .from("reviews")
+              .select("rating", { count: "exact" })
+              .eq("reviewee_profile_id", profileData2.id);
+
+            if (reviewsData && reviewsData.length > 0) {
+              const avg = reviewsData.reduce((acc, r) => acc + r.rating, 0) / reviewsData.length;
+              setAverageRating(avg);
+            }
+            setReviewCount(reviewsCount || 0);
+          }
         }
       }
     } catch (error) {
@@ -100,6 +129,70 @@ const BusinessDashboard = () => {
     };
     const config = statusMap[status] || statusMap.pending;
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const handleSubmitReview = async (reviewData: {
+    rating: number;
+    title: string;
+    content: string;
+    ratingCategories: Record<string, number>;
+  }) => {
+    if (!selectedConnection) return;
+
+    try {
+      const connection = requests.find((r) => r.id === selectedConnection && r.status === "accepted");
+      if (!connection) return;
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (!profileData) return;
+
+      const { data: businessProfile } = await supabase
+        .from("business_profiles")
+        .select("profile_id")
+        .eq("profile_id", profileData.id)
+        .single();
+
+      const { data: workerProfile } = await supabase
+        .from("worker_profiles")
+        .select("profile_id")
+        .eq("id", connection.worker_profile_id)
+        .single();
+
+      if (!businessProfile || !workerProfile) return;
+
+      const { error } = await supabase.from("reviews").insert({
+        connection_request_id: selectedConnection,
+        reviewer_profile_id: businessProfile.profile_id,
+        reviewee_profile_id: workerProfile.profile_id,
+        reviewer_type: "business",
+        rating: reviewData.rating,
+        title: reviewData.title || null,
+        content: reviewData.content,
+        rating_categories: reviewData.ratingCategories,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Review submitted",
+        description: "Thank you for your feedback!",
+      });
+
+      setReviewFormOpen(false);
+      setSelectedConnection(null);
+      fetchDashboardData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -133,7 +226,7 @@ const BusinessDashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
           <Card className="shadow-soft">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Requests</CardTitle>
@@ -168,6 +261,28 @@ const BusinessDashboard = () => {
                 {requests.filter((r) => r.status === "accepted").length}
               </div>
               <p className="text-xs text-muted-foreground">Accepted connections</p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-soft">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Reviews</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {reviewCount > 0 ? (
+                <>
+                  <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {reviewCount} review{reviewCount !== 1 ? "s" : ""}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">-</div>
+                  <p className="text-xs text-muted-foreground">No reviews yet</p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -238,7 +353,7 @@ const BusinessDashboard = () => {
               <div className="space-y-4">
                 {requests.map((request) => (
                   <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold">
                         {getDisplayName(request.worker_profiles)}
                       </h4>
@@ -246,13 +361,44 @@ const BusinessDashboard = () => {
                         {request.hours_per_week} hours/week • {new Date(request.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    {getStatusBadge(request.status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(request.status)}
+                      {request.status === "accepted" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedConnection(request.id);
+                            setReviewFormOpen(true);
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          Review
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Review Form Dialog */}
+        {reviewFormOpen && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <ReviewForm
+                reviewerType="business"
+                onSubmit={handleSubmitReview}
+                onCancel={() => {
+                  setReviewFormOpen(false);
+                  setSelectedConnection(null);
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

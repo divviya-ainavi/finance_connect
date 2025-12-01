@@ -130,6 +130,73 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          connection_request_id: string
+          content: string
+          created_at: string | null
+          helpful_count: number | null
+          id: string
+          rating: number
+          rating_categories: Json | null
+          reviewee_profile_id: string
+          reviewer_profile_id: string
+          reviewer_type: string
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          connection_request_id: string
+          content: string
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          rating: number
+          rating_categories?: Json | null
+          reviewee_profile_id: string
+          reviewer_profile_id: string
+          reviewer_type: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          connection_request_id?: string
+          content?: string
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          rating?: number
+          rating_categories?: Json | null
+          reviewee_profile_id?: string
+          reviewer_profile_id?: string
+          reviewer_type?: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_connection_request_id_fkey"
+            columns: ["connection_request_id"]
+            isOneToOne: false
+            referencedRelation: "connection_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewee_profile_id_fkey"
+            columns: ["reviewee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_profile_id_fkey"
+            columns: ["reviewer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shortlists: {
         Row: {
           business_profile_id: string
