@@ -390,6 +390,40 @@ const Auth = () => {
                       required
                     />
                   </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-sm px-0"
+                      onClick={async () => {
+                        if (!email) {
+                          toast({
+                            title: "Email required",
+                            description: "Please enter your email address first.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                          redirectTo: `${window.location.origin}/reset-password`,
+                        });
+                        if (error) {
+                          toast({
+                            title: "Error",
+                            description: error.message,
+                            variant: "destructive",
+                          });
+                        } else {
+                          toast({
+                            title: "Check your email",
+                            description: "We've sent you a password reset link.",
+                          });
+                        }
+                      }}
+                    >
+                      Forgot password?
+                    </Button>
+                  </div>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign In

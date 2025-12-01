@@ -9,9 +9,12 @@ import Auth from "./pages/Auth";
 import Search from "./pages/Search";
 import WorkerDashboard from "./pages/worker/Dashboard";
 import WorkerProfile from "./pages/worker/Profile";
+import WorkerVerification from "./pages/worker/Verification";
+import SkillsTest from "./components/worker/SkillsTest";
 import BusinessDashboard from "./pages/business/Dashboard";
 import BusinessShortlist from "./pages/business/Shortlist";
 import CandidateDetail from "./pages/CandidateDetail";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,9 +32,12 @@ const App = () => (
             <Route path="/search" element={<Search />} />
             <Route path="/worker/dashboard" element={<WorkerDashboard />} />
             <Route path="/worker/profile" element={<WorkerProfile />} />
+            <Route path="/worker/verification" element={<WorkerVerification />} />
+            <Route path="/worker/test/:role" element={<SkillsTest />} />
             <Route path="/business/dashboard" element={<BusinessDashboard />} />
             <Route path="/business/shortlist" element={<BusinessShortlist />} />
             <Route path="/candidate/:id" element={<CandidateDetail />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

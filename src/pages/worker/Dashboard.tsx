@@ -224,6 +224,14 @@ const WorkerDashboard = () => {
                 <FileText className="mr-2 h-4 w-4" />
                 Edit Profile
               </Button>
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => navigate("/worker/verification")}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Verification
+              </Button>
             </CardContent>
           </Card>
 
