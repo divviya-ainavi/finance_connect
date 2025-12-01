@@ -42,6 +42,7 @@ const WorkerDashboard = () => {
   const [profile, setProfile] = useState<WorkerProfile | null>(null);
   const [verification, setVerification] = useState<VerificationStatus | null>(null);
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
+  const [acceptedRequests, setAcceptedRequests] = useState<ConnectionRequest[]>([]);
   const [profileCompletion, setProfileCompletion] = useState(0);
 
   useEffect(() => {
@@ -91,6 +92,19 @@ const WorkerDashboard = () => {
             .order("created_at", { ascending: false });
 
           setRequests(requestsData || []);
+          
+          // Fetch accepted connection requests
+          const { data: acceptedData } = await supabase
+            .from("connection_requests")
+            .select(`
+              *,
+              business_profiles (company_name)
+            `)
+            .eq("worker_profile_id", workerProfile.id)
+            .eq("status", "accepted")
+            .order("updated_at", { ascending: false });
+
+          setAcceptedRequests(acceptedData || []);
         }
       }
     } catch (error) {
@@ -273,13 +287,6 @@ const WorkerDashboard = () => {
               <Button 
                 className="w-full" 
                 variant="outline"
-                onClick={() => navigate("/worker/profile")}
-              >
-                View My Profile
-              </Button>
-              <Button 
-                className="w-full" 
-                variant="outline"
                 onClick={() => navigate("/search")}
               >
                 Browse Opportunities
@@ -343,6 +350,46 @@ const WorkerDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Accepted Connections */}
+        {acceptedRequests.length > 0 && (
+          <Card className="mt-6 shadow-soft">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-accent" />
+                Accepted Connections
+              </CardTitle>
+              <CardDescription>Businesses you're working with</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {acceptedRequests.map((request) => (
+                  <Card key={request.id} className="border bg-accent/5">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-semibold text-lg">{request.business_profiles.company_name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {request.hours_per_week} hours/week
+                          </p>
+                        </div>
+                        <Badge>Connected</Badge>
+                      </div>
+                      {request.message && (
+                        <p className="text-sm mb-2 p-3 bg-muted rounded-lg">
+                          {request.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Connected on {new Date(request.created_at).toLocaleDateString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
