@@ -549,7 +549,7 @@ const WorkerProfile = () => {
                   <Label htmlFor="pseudonym">Pseudonym</Label>
                   <Input id="pseudonym" value={pseudonym} onChange={e => setPseudonym(e.target.value)} placeholder="e.g., Candidate #1234" />
                   <p className="text-xs text-muted-foreground mt-2">
-                    💡 Switch to fully disclosed mode to upload your CV and increase your visibility to businesses.
+                    💡 Switch to fully disclosed mode above to upload your CV and increase your visibility to businesses.
                   </p>
                 </div>}
             </CardContent>
