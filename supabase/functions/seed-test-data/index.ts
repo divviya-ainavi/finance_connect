@@ -725,7 +725,7 @@ Deno.serve(async (req) => {
       } else {
         console.log(`Created ${insertedRequests?.length || 0} connection requests`);
 
-        // Create reviews for accepted connections (max 2 per connection: 1 from business, 1 from worker)
+        // Create reviews - ensure EVERY worker gets at least 2-3 reviews
         const acceptedRequests = insertedRequests?.filter((req: any) => req.status === "accepted") || [];
         
         const reviewTitles = [
@@ -739,6 +739,11 @@ Deno.serve(async (req) => {
           "Fantastic management accountant",
           "Professional and punctual",
           "Highly skilled finance expert",
+          "Brilliant analytical skills",
+          "Thorough and accurate work",
+          "Top-tier financial expertise",
+          "Exceeded all expectations",
+          "Invaluable team member",
         ];
 
         const reviewContents = [
@@ -752,46 +757,61 @@ Deno.serve(async (req) => {
           "provided valuable insights into our financial position. Excellent work.",
           "completed all tasks efficiently and accurately. A pleasure to work with.",
           "demonstrated exceptional technical skills and professionalism throughout.",
+          "transformed our reporting processes. Exceptional analytical capabilities.",
+          "handled complex transactions with ease. Highly recommend their services.",
+          "made our month-end close seamless. Outstanding technical knowledge.",
+          "improved our cashflow forecasting dramatically. Great strategic insights.",
+          "streamlined our AP processes brilliantly. Saved us hours each week.",
         ];
 
-        // Create reviews: for each connection, create 1-2 reviews (business and/or worker)
+        // Track reviews per worker to ensure everyone gets at least 2
+        const reviewsPerWorker = new Map<string, number>();
+        
+        // First pass: create reviews from accepted connections
         for (let i = 0; i < acceptedRequests.length; i++) {
           const request = acceptedRequests[i];
+          const workerProfileId = request.worker_profile_id;
           
-          // Create business review (business reviewing worker)
-          if (i % 3 !== 2) { // Skip every third one to create variety
-            const workerName = workerIdToName.get(request.worker_profile_id) || "The worker";
-            const businessReviewerProfileId = businessIdToProfileId.get(request.business_profile_id);
-            const workerRevieweeProfileId = workerIdToProfileId.get(request.worker_profile_id);
-            
-            if (businessReviewerProfileId && workerRevieweeProfileId) {
-              const rating = 4 + (i % 2); // Ratings of 4 or 5
-              
-              reviewsData.push({
-                connection_request_id: request.id,
-                reviewer_profile_id: businessReviewerProfileId,
-                reviewee_profile_id: workerRevieweeProfileId,
-                reviewer_type: "business",
-                rating: rating,
-                title: reviewTitles[i % reviewTitles.length],
-                content: `${workerName} ${reviewContents[i % reviewContents.length]}`,
-                rating_categories: {
-                  communication: Math.max(3, Math.min(5, rating + (i % 3 - 1))),
-                  quality_of_work: Math.max(3, Math.min(5, rating + (i % 2))),
-                  professionalism: Math.max(3, Math.min(5, rating)),
-                  punctuality: Math.max(3, Math.min(5, rating - (i % 2))),
-                },
-              });
-            }
+          // Track reviews for this worker
+          if (!reviewsPerWorker.has(workerProfileId)) {
+            reviewsPerWorker.set(workerProfileId, 0);
           }
           
-          // Create worker review (worker reviewing business)
-          if (i % 4 !== 3) { // Skip every fourth one to create variety
-            const workerReviewerProfileId = workerIdToProfileId.get(request.worker_profile_id);
+          // Create business review (business reviewing worker)
+          const workerName = workerIdToName.get(workerProfileId) || "The worker";
+          const businessReviewerProfileId = businessIdToProfileId.get(request.business_profile_id);
+          const workerRevieweeProfileId = workerIdToProfileId.get(workerProfileId);
+          
+          if (businessReviewerProfileId && workerRevieweeProfileId) {
+            // Vary ratings between 3.5 and 5.0 (use integer 4 or 5)
+            const rating = i % 5 === 0 ? 4 : 5;
+            
+            reviewsData.push({
+              connection_request_id: request.id,
+              reviewer_profile_id: businessReviewerProfileId,
+              reviewee_profile_id: workerRevieweeProfileId,
+              reviewer_type: "business",
+              rating: rating,
+              title: reviewTitles[i % reviewTitles.length],
+              content: `${workerName} ${reviewContents[i % reviewContents.length]}`,
+              rating_categories: {
+                communication: Math.max(3, Math.min(5, rating + (i % 3 - 1))),
+                quality_of_work: Math.max(3, Math.min(5, rating + ((i + 1) % 2))),
+                professionalism: Math.max(4, Math.min(5, rating)),
+                punctuality: Math.max(3, Math.min(5, rating - (i % 2))),
+              },
+            });
+            
+            reviewsPerWorker.set(workerProfileId, (reviewsPerWorker.get(workerProfileId) || 0) + 1);
+          }
+          
+          // Create worker review (worker reviewing business) - less frequently
+          if (i % 3 === 0) {
+            const workerReviewerProfileId = workerIdToProfileId.get(workerProfileId);
             const businessRevieweeProfileId = businessIdToProfileId.get(request.business_profile_id);
             
             if (workerReviewerProfileId && businessRevieweeProfileId) {
-              const rating = 4 + ((i + 1) % 2); // Ratings of 4 or 5
+              const rating = 4 + ((i + 1) % 2);
               
               reviewsData.push({
                 connection_request_id: request.id,
@@ -799,15 +819,74 @@ Deno.serve(async (req) => {
                 reviewee_profile_id: businessRevieweeProfileId,
                 reviewer_type: "worker",
                 rating: rating,
-                title: "Great client to work with",
-                content: "Professional environment and clear communication. Payment was always on time.",
+                title: i % 2 === 0 ? "Great client to work with" : "Professional and supportive team",
+                content: i % 2 === 0 
+                  ? "Professional environment and clear communication. Payment was always on time."
+                  : "Excellent collaboration and timely feedback. Very organized team to work with.",
                 rating_categories: {
                   communication: Math.max(3, Math.min(5, rating)),
                   clarity_of_requirements: Math.max(3, Math.min(5, rating + (i % 2))),
-                  timeliness_of_payment: Math.max(3, Math.min(5, rating + (i % 3 - 1))),
+                  timeliness_of_payment: Math.max(4, Math.min(5, rating)),
                   work_environment: Math.max(3, Math.min(5, rating - (i % 2))),
                 },
               });
+            }
+          }
+        }
+        
+        // Second pass: ensure ALL workers have at least 2 reviews
+        for (const worker of workerProfiles) {
+          const currentReviewCount = reviewsPerWorker.get(worker.id) || 0;
+          const reviewsNeeded = Math.max(0, 2 - currentReviewCount);
+          
+          for (let j = 0; j < reviewsNeeded; j++) {
+            // Find a business to review from (use round-robin)
+            const businessIndex = (workerProfiles.indexOf(worker) + j) % businessProfiles.length;
+            const business = businessProfiles[businessIndex];
+            
+            const businessReviewerProfileId = businessIdToProfileId.get(business.id);
+            const workerRevieweeProfileId = workerIdToProfileId.get(worker.id);
+            
+            if (businessReviewerProfileId && workerRevieweeProfileId) {
+              // Create a connection request for this review (even if not in original set)
+              const tempConnectionRequest = {
+                worker_profile_id: worker.id,
+                business_profile_id: business.id,
+                status: "accepted" as const,
+                message: "Supplemental connection for review",
+                hours_per_week: 10,
+                rate_offered: 20,
+                remote_onsite: "fully_remote",
+              };
+              
+              const { data: tempRequest } = await supabase
+                .from("connection_requests")
+                .insert(tempConnectionRequest)
+                .select()
+                .single();
+              
+              if (tempRequest) {
+                const workerName = workerIdToName.get(worker.id) || "The worker";
+                const titleIndex = (workerProfiles.indexOf(worker) * 3 + j) % reviewTitles.length;
+                const contentIndex = (workerProfiles.indexOf(worker) * 3 + j) % reviewContents.length;
+                const rating = j % 4 === 0 ? 4 : 5;
+                
+                reviewsData.push({
+                  connection_request_id: tempRequest.id,
+                  reviewer_profile_id: businessReviewerProfileId,
+                  reviewee_profile_id: workerRevieweeProfileId,
+                  reviewer_type: "business",
+                  rating: rating,
+                  title: reviewTitles[titleIndex],
+                  content: `${workerName} ${reviewContents[contentIndex]}`,
+                  rating_categories: {
+                    communication: Math.max(3, Math.min(5, rating + (j % 2))),
+                    quality_of_work: Math.max(4, Math.min(5, rating)),
+                    professionalism: Math.max(4, Math.min(5, rating)),
+                    punctuality: Math.max(3, Math.min(5, rating - (j % 2))),
+                  },
+                });
+              }
             }
           }
         }
