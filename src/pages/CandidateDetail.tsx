@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2, MessageSquare } from "lucide-react";
+import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2, MessageSquare, Briefcase } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import ReviewSummary from "@/components/reviews/ReviewSummary";
 import ReviewList from "@/components/reviews/ReviewList";
 
@@ -31,6 +32,7 @@ interface WorkerProfile {
   qualifications: string;
   own_equipment: boolean;
   availability: any;
+  photo_url?: string | null;
   verification_statuses?: {
     testing_status: string;
     references_status: string;
@@ -56,6 +58,7 @@ const CandidateDetail = () => {
   const [rateOffered, setRateOffered] = useState("");
   const [reviews, setReviews] = useState<any[]>([]);
   const [averageRating, setAverageRating] = useState(0);
+  const [projectsDelivered, setProjectsDelivered] = useState(0);
 
   useEffect(() => {
     if (!authLoading && (!user || userType !== "business")) {
@@ -67,8 +70,23 @@ const CandidateDetail = () => {
       fetchWorkerProfile();
       checkIfShortlisted();
       fetchReviews();
+      fetchProjectsDelivered();
     }
   }, [user, userType, authLoading, id, navigate]);
+
+  const fetchProjectsDelivered = async () => {
+    try {
+      const { count } = await supabase
+        .from("connection_requests")
+        .select("*", { count: "exact", head: true })
+        .eq("worker_profile_id", id!)
+        .eq("status", "accepted");
+      
+      setProjectsDelivered(count || 0);
+    } catch (error) {
+      console.error("Error fetching projects delivered:", error);
+    }
+  };
 
   const fetchWorkerProfile = async () => {
     try {
@@ -319,13 +337,36 @@ const CandidateDetail = () => {
           <Card className="shadow-medium">
             <CardHeader>
               <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <CardTitle className="text-2xl">{getDisplayName()}</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{worker.location || "Location not specified"}</span>
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-20 w-20">
+                    {worker.photo_url ? (
+                      <AvatarImage src={worker.photo_url} alt={worker.name} />
+                    ) : null}
+                    <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                      {worker.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-2xl mb-2">{getDisplayName()}</CardTitle>
+                    <div className="flex items-center gap-1 text-muted-foreground mb-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>{worker.location || "Location not specified"}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      {averageRating > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-accent text-accent" />
+                          <span className="font-medium">{averageRating.toFixed(1)}</span>
+                          <span className="text-muted-foreground">({reviews.length} reviews)</span>
+                        </div>
+                      )}
+                      {projectsDelivered > 0 && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Briefcase className="h-4 w-4" />
+                          <span>{projectsDelivered} projects via FinanceConnect</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

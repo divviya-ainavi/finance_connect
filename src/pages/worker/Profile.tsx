@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText } from "lucide-react";
+import { FileText, Camera, X } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -98,6 +99,10 @@ const WorkerProfile = () => {
   const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Photo upload
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
   // Industries & Company Sizes
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
@@ -163,6 +168,7 @@ const WorkerProfile = () => {
         setSelectedCompanySizes(data.company_sizes || []);
         setOwnEquipment(data.own_equipment || false);
         setCvUrl(data.cv_url || null);
+        setPhotoUrl(data.photo_url || null);
 
         // Fetch skills
         const { data: skillsData } = await supabase
@@ -270,6 +276,50 @@ const WorkerProfile = () => {
     return urlData.publicUrl;
   };
 
+  const handlePhotoUpload = async (file: File) => {
+    if (!user) return null;
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage.from("profile-photos").upload(fileName, file, { upsert: true });
+
+    if (uploadError) {
+      console.error("Photo upload error:", uploadError);
+      throw uploadError;
+    }
+
+    const { data: urlData } = supabase.storage.from("profile-photos").getPublicUrl(fileName);
+
+    return urlData.publicUrl;
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!user || !photoUrl) return;
+
+    try {
+      const fileName = photoUrl.split("/").slice(-2).join("/");
+      const { error } = await supabase.storage.from("profile-photos").remove([fileName]);
+
+      if (error) throw error;
+
+      setPhotoUrl(null);
+      setPhotoFile(null);
+
+      toast({
+        title: "Success",
+        description: "Photo deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting photo:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete photo",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCvDelete = async () => {
     if (!user || !cvUrl) return;
 
@@ -315,6 +365,12 @@ const WorkerProfile = () => {
         newCvUrl = await handleCvUpload(cvFile);
       }
 
+      // Upload photo if new file selected
+      let newPhotoUrl = photoUrl;
+      if (photoFile) {
+        newPhotoUrl = await handlePhotoUpload(photoFile);
+      }
+
       const { data: profileData } = await supabase.from("profiles").select("id").eq("user_id", user!.id).single();
 
       const profilePayload = {
@@ -339,6 +395,7 @@ const WorkerProfile = () => {
         company_sizes: selectedCompanySizes,
         own_equipment: ownEquipment,
         cv_url: newCvUrl,
+        photo_url: newPhotoUrl,
       };
 
       let workerProfileId = profileId;
@@ -536,6 +593,69 @@ const WorkerProfile = () => {
                       onRateMinChange={setRateMin}
                       onRateMaxChange={setRateMax}
                       onNegotiableChange={setRateNegotiable}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Photo Upload */}
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Profile Photo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-6">
+                  <div className="relative">
+                    <Avatar className="h-24 w-24">
+                      {(photoUrl || photoFile) ? (
+                        <AvatarImage 
+                          src={photoFile ? URL.createObjectURL(photoFile) : photoUrl || undefined} 
+                          alt="Profile photo" 
+                        />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                        {name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    {(photoUrl || photoFile) && (
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                        onClick={() => {
+                          if (photoFile) {
+                            setPhotoFile(null);
+                          } else {
+                            handlePhotoDelete();
+                          }
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="photo-upload">Upload Photo</Label>
+                    <p className="text-sm text-muted-foreground">A professional photo helps businesses recognize you. Max 5MB.</p>
+                    <Input
+                      id="photo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 5242880) {
+                            toast({
+                              title: "Error",
+                              description: "File size must be less than 5MB",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          setPhotoFile(file);
+                        }
+                      }}
                     />
                   </div>
                 </div>

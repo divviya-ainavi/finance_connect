@@ -15,7 +15,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="h-6 w-6 text-primary" />
-            <span className="text-xl font-semibold">Part-Time Finance People</span>
+            <span className="text-xl font-semibold">FinanceConnect</span>
           </div>
           <Button variant="outline" onClick={() => navigate("/auth")}>
             Sign In
@@ -224,7 +224,7 @@ const Landing = () => {
       {/* Footer */}
       <footer className="border-t py-8 bg-background">
         <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-          <p>&copy; 2025 Part-Time Finance People. All rights reserved.</p>
+          <p>&copy; 2025 FinanceConnect. All rights reserved.</p>
         </div>
       </footer>
     </div>

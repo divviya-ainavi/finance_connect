@@ -8,13 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Briefcase, Loader2, MapPin, CheckCircle, Star, Search as SearchIcon } from "lucide-react";
+import { Briefcase, Loader2, MapPin, CheckCircle, Star, Search as SearchIcon, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 
 interface WorkerProfile {
   id: string;
   name: string;
   pseudonym: string;
+  profile_id: string;
   roles: string[];
   location: string;
   onsite_preference: string;
@@ -24,6 +26,7 @@ interface WorkerProfile {
   available_from: string | null;
   hourly_rate_min: number | null;
   hourly_rate_max: number | null;
+  photo_url?: string | null;
   verification_statuses?: {
     testing_status: string;
     references_status: string;
@@ -31,6 +34,7 @@ interface WorkerProfile {
   };
   average_rating?: number;
   review_count?: number;
+  projects_delivered?: number;
 }
 
 const Search = () => {
@@ -74,33 +78,37 @@ const Search = () => {
 
       if (error) throw error;
 
-      // Fetch review stats for each worker
-      const workersWithReviews = await Promise.all(
+      // Fetch review stats and projects delivered for each worker
+      const workersWithStats = await Promise.all(
         (data || []).map(async (worker) => {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", worker.profile_id)
-            .single();
+          // Query reviews directly using worker.profile_id
+          const { data: reviews } = await supabase
+            .from("reviews")
+            .select("rating")
+            .eq("reviewee_profile_id", worker.profile_id);
 
-          if (profileData) {
-            const { data: reviews } = await supabase
-              .from("reviews")
-              .select("rating")
-              .eq("reviewee_profile_id", profileData.id);
+          const average_rating = reviews && reviews.length > 0
+            ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+            : 0;
+          const review_count = reviews?.length || 0;
 
-            const average_rating = reviews && reviews.length > 0
-              ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-              : 0;
-            const review_count = reviews?.length || 0;
+          // Count accepted connection requests as projects delivered
+          const { count } = await supabase
+            .from("connection_requests")
+            .select("*", { count: "exact", head: true })
+            .eq("worker_profile_id", worker.id)
+            .eq("status", "accepted");
 
-            return { ...worker, average_rating, review_count };
-          }
-          return { ...worker, average_rating: 0, review_count: 0 };
+          return { 
+            ...worker, 
+            average_rating, 
+            review_count, 
+            projects_delivered: count || 0 
+          };
         })
       );
 
-      setCandidates(workersWithReviews);
+      setCandidates(workersWithStats);
     } catch (error) {
       console.error("Error fetching candidates:", error);
     } finally {
@@ -290,7 +298,7 @@ const Search = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="h-6 w-6 text-primary" />
-            <span className="text-xl font-semibold">Part-Time Finance People</span>
+            <span className="text-xl font-semibold">FinanceConnect</span>
           </div>
           <div className="flex gap-2">
             {!user ? (
@@ -414,36 +422,62 @@ const Search = () => {
                   onClick={() => handleCandidateClick(candidate.id)}
                 >
                   <CardHeader>
-                    <div className="flex items-start justify-between mb-2">
-                      <CardTitle className="text-base">
-                        {getDisplayName(candidate)}
-                      </CardTitle>
-                      <Badge variant="secondary" className="text-xs">Best Match</Badge>
+                    <div className="flex items-start gap-3 mb-2">
+                      <Avatar className="h-10 w-10">
+                        {candidate.photo_url ? (
+                          <AvatarImage src={candidate.photo_url} alt={candidate.name} />
+                        ) : null}
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                          {candidate.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">
+                            {getDisplayName(candidate)}
+                          </CardTitle>
+                          <Badge variant="secondary" className="text-xs">Best Match</Badge>
+                        </div>
+                        <CardDescription className="flex items-center gap-1 text-xs">
+                          <MapPin className="h-3 w-3" />
+                          {candidate.location}
+                        </CardDescription>
+                      </div>
                     </div>
-                    <CardDescription className="flex items-center gap-1 text-xs">
-                      <MapPin className="h-3 w-3" />
-                      {candidate.location}
-                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {candidate.average_rating && candidate.average_rating > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        <span className="text-sm font-medium">{candidate.average_rating.toFixed(1)}</span>
-                        <span className="text-xs text-muted-foreground">({candidate.review_count})</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-accent text-accent" />
+                      <span className="text-sm font-medium">
+                        {candidate.average_rating && candidate.average_rating > 0 
+                          ? candidate.average_rating.toFixed(1) 
+                          : "New"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {candidate.review_count && candidate.review_count > 0 
+                          ? `(${candidate.review_count} reviews)` 
+                          : "No reviews yet"}
+                      </span>
+                    </div>
                     {candidate.hourly_rate_min && candidate.hourly_rate_max && (
                       <p className="text-xs text-muted-foreground">
                         £{candidate.hourly_rate_min}-{candidate.hourly_rate_max}/hr
                       </p>
                     )}
-                    <div className="flex items-center gap-2 pt-2 border-t">
-                      <CheckCircle className="h-3 w-3 text-accent" />
-                      <span className="text-xs text-muted-foreground">
-                        {getVerificationCount(candidate)}/3 Verified
-                      </span>
-                    </div>
+                    {(candidate.projects_delivered ?? 0) > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Briefcase className="h-3 w-3" />
+                        {candidate.projects_delivered} projects via FinanceConnect
+                      </div>
+                    )}
+                    {getVerificationCount(candidate) > 0 && (
+                      <div className="flex items-center gap-2 pt-2 border-t">
+                        <CheckCircle className="h-3 w-3 text-accent" />
+                        <span className="text-xs text-muted-foreground">
+                          {getVerificationCount(candidate)}/3 Verified
+                        </span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -473,30 +507,54 @@ const Search = () => {
                 onClick={() => handleCandidateClick(candidate.id)}
               >
                 <CardHeader>
-                  <div className="flex items-start justify-between mb-2">
-                    <CardTitle className="text-lg">
-                      {getDisplayName(candidate)}
-                    </CardTitle>
-                    <Badge variant={candidate.available_from && new Date(candidate.available_from) > new Date() ? "outline" : "default"}>
-                      {getAvailabilityText(candidate)}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <CardDescription className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {candidate.location || "Location not specified"}
-                    </CardDescription>
-                    {candidate.average_rating && candidate.average_rating > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                        <span className="text-sm font-medium">{candidate.average_rating.toFixed(1)}</span>
-                        <span className="text-xs text-muted-foreground">({candidate.review_count} reviews)</span>
+                  <div className="flex items-start gap-3 mb-2">
+                    <Avatar className="h-12 w-12">
+                      {candidate.photo_url ? (
+                        <AvatarImage src={candidate.photo_url} alt={candidate.name} />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {candidate.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-lg">
+                          {getDisplayName(candidate)}
+                        </CardTitle>
+                        <Badge variant={candidate.available_from && new Date(candidate.available_from) > new Date() ? "outline" : "default"}>
+                          {getAvailabilityText(candidate)}
+                        </Badge>
                       </div>
-                    )}
+                      <CardDescription className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {candidate.location || "Location not specified"}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="space-y-1 mt-2">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-accent text-accent" />
+                      <span className="text-sm font-medium">
+                        {candidate.average_rating && candidate.average_rating > 0 
+                          ? candidate.average_rating.toFixed(1) 
+                          : "New"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {candidate.review_count && candidate.review_count > 0 
+                          ? `(${candidate.review_count} reviews)` 
+                          : "No reviews yet"}
+                      </span>
+                    </div>
                     {candidate.hourly_rate_min && candidate.hourly_rate_max && (
                       <p className="text-sm font-medium text-primary">
                         £{candidate.hourly_rate_min}-{candidate.hourly_rate_max}/hr
                       </p>
+                    )}
+                    {(candidate.projects_delivered ?? 0) > 0 && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Briefcase className="h-3 w-3" />
+                        {candidate.projects_delivered} projects via FinanceConnect
+                      </div>
                     )}
                   </div>
                 </CardHeader>
@@ -532,12 +590,14 @@ const Search = () => {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2 pt-2 border-t">
-                    <CheckCircle className="h-4 w-4 text-accent" />
-                    <span className="text-xs text-muted-foreground">
-                      {getVerificationCount(candidate)}/3 Verifications Complete
-                    </span>
-                  </div>
+                  {getVerificationCount(candidate) > 0 && (
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <CheckCircle className="h-4 w-4 text-accent" />
+                      <span className="text-xs text-muted-foreground">
+                        {getVerificationCount(candidate)}/3 Verifications Complete
+                      </span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
