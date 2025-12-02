@@ -114,7 +114,7 @@ const Auth = () => {
 
         toast({
           title: "Account created!",
-          description: "Welcome to Part-Time Finance People.",
+          description: "Welcome to FinanceConnect.",
         });
 
         // Redirect based on user type
@@ -345,7 +345,7 @@ const Auth = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Briefcase className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-semibold">Part-Time Finance People</span>
+            <span className="text-2xl font-semibold">FinanceConnect</span>
           </div>
           <p className="text-muted-foreground">
             Sign in or create an account to get started

@@ -438,6 +438,7 @@ export type Database = {
             | Database["public"]["Enums"]["onsite_preference"]
             | null
           own_equipment: boolean | null
+          photo_url: string | null
           profile_id: string
           pseudonym: string | null
           qualifications: string | null
@@ -470,6 +471,7 @@ export type Database = {
             | Database["public"]["Enums"]["onsite_preference"]
             | null
           own_equipment?: boolean | null
+          photo_url?: string | null
           profile_id: string
           pseudonym?: string | null
           qualifications?: string | null
@@ -504,6 +506,7 @@ export type Database = {
             | Database["public"]["Enums"]["onsite_preference"]
             | null
           own_equipment?: boolean | null
+          photo_url?: string | null
           profile_id?: string
           pseudonym?: string | null
           qualifications?: string | null
