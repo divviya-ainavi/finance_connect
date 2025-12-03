@@ -10,9 +10,13 @@ import Search from "./pages/Search";
 import WorkerDashboard from "./pages/worker/Dashboard";
 import WorkerProfile from "./pages/worker/Profile";
 import WorkerVerification from "./pages/worker/Verification";
+import WorkerSettings from "./pages/worker/Settings";
 import SkillsTest from "./components/worker/SkillsTest";
 import BusinessDashboard from "./pages/business/Dashboard";
 import BusinessShortlist from "./pages/business/Shortlist";
+import BusinessProfile from "./pages/business/Profile";
+import BusinessSettings from "./pages/business/Settings";
+import BusinessDetail from "./pages/BusinessDetail";
 import CandidateDetail from "./pages/CandidateDetail";
 import ResetPassword from "./pages/ResetPassword";
 import Reviews from "./pages/Reviews";
@@ -34,9 +38,13 @@ const App = () => (
             <Route path="/worker/dashboard" element={<WorkerDashboard />} />
             <Route path="/worker/profile" element={<WorkerProfile />} />
             <Route path="/worker/verification" element={<WorkerVerification />} />
+            <Route path="/worker/settings" element={<WorkerSettings />} />
             <Route path="/worker/test/:role" element={<SkillsTest />} />
             <Route path="/business/dashboard" element={<BusinessDashboard />} />
             <Route path="/business/shortlist" element={<BusinessShortlist />} />
+            <Route path="/business/profile" element={<BusinessProfile />} />
+            <Route path="/business/settings" element={<BusinessSettings />} />
+            <Route path="/business/:id" element={<BusinessDetail />} />
             <Route path="/candidate/:id" element={<CandidateDetail />} />
             <Route path="/reviews/:profileType/:profileId" element={<Reviews />} />
             <Route path="/reset-password" element={<ResetPassword />} />
