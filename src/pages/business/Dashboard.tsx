@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Loader2, Search, Users, Clock, LogOut, Star, MessageSquare } from "lucide-react";
+import { Briefcase, Loader2, Search, Users, Clock, LogOut, Star, MessageSquare, Settings, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
 
@@ -212,10 +212,18 @@ const BusinessDashboard = () => {
             <Briefcase className="h-6 w-6 text-primary" />
             <span className="text-xl font-semibold">Business Dashboard</span>
           </div>
-          <Button variant="outline" onClick={signOut} size="sm">
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/business/profile")}>
+              <Building2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/business/settings")}>
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" onClick={signOut} size="sm">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 

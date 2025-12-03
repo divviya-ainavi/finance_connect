@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Loader2, CheckCircle, Clock, FileText, User, LogOut, Star, MessageSquare } from "lucide-react";
+import { Briefcase, Loader2, CheckCircle, Clock, FileText, User, LogOut, Star, MessageSquare, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
 
@@ -290,10 +290,15 @@ const WorkerDashboard = () => {
             <Briefcase className="h-6 w-6 text-primary" />
             <span className="text-xl font-semibold">Worker Dashboard</span>
           </div>
-          <Button variant="outline" onClick={signOut} size="sm">
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/worker/settings")}>
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" onClick={signOut} size="sm">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -440,7 +445,12 @@ const WorkerDashboard = () => {
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between mb-4">
                         <div>
-                          <h3 className="font-semibold text-lg">{request.business_profiles.company_name}</h3>
+                          <h3 
+                            className="font-semibold text-lg cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => navigate(`/business/${request.business_profile_id}`)}
+                          >
+                            {request.business_profiles.company_name}
+                          </h3>
                           <p className="text-sm text-muted-foreground">
                             {request.hours_per_week} hours/week
                           </p>

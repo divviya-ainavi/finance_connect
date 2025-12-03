@@ -17,30 +17,48 @@ export type Database = {
       business_profiles: {
         Row: {
           company_name: string
+          company_size: string | null
           contact_name: string
           contact_role: string | null
           created_at: string | null
+          description: string | null
           id: string
+          industry: string | null
+          location: string | null
+          logo_url: string | null
           profile_id: string
           updated_at: string | null
+          website: string | null
         }
         Insert: {
           company_name: string
+          company_size?: string | null
           contact_name: string
           contact_role?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          industry?: string | null
+          location?: string | null
+          logo_url?: string | null
           profile_id: string
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
           company_name?: string
+          company_size?: string | null
           contact_name?: string
           contact_role?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          industry?: string | null
+          location?: string | null
+          logo_url?: string | null
           profile_id?: string
           updated_at?: string | null
+          website?: string | null
         }
         Relationships: [
           {
