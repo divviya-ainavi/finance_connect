@@ -17,9 +17,14 @@ const Landing = () => {
             <Briefcase className="h-6 w-6 text-primary" />
             <span className="text-xl font-semibold">FinanceConnect</span>
           </div>
-          <Button variant="outline" onClick={() => navigate("/auth")}>
-            Sign In
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate("/pricing")}>
+              Pricing
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/auth")}>
+              Sign In
+            </Button>
+          </div>
         </div>
       </header>
 
