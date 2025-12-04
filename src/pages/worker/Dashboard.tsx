@@ -291,6 +291,9 @@ const WorkerDashboard = () => {
             <span className="text-xl font-semibold">Worker Dashboard</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/messages")}>
+              <MessageSquare className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/worker/settings")}>
               <Settings className="h-4 w-4" />
             </Button>

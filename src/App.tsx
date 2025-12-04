@@ -20,6 +20,8 @@ import BusinessDetail from "./pages/BusinessDetail";
 import CandidateDetail from "./pages/CandidateDetail";
 import ResetPassword from "./pages/ResetPassword";
 import Reviews from "./pages/Reviews";
+import Messages from "./pages/Messages";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 // Admin imports
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -63,6 +65,8 @@ const App = () => (
             <Route path="/candidate/:id" element={<CandidateDetail />} />
             <Route path="/reviews/:profileType/:profileId" element={<Reviews />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/pricing" element={<Pricing />} />
             {/* Admin routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
