@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_action_logs: {
+        Row: {
+          action_type: string
+          admin_user_id: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          action_type: string
+          admin_user_id: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          action_type?: string
+          admin_user_id?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       business_profiles: {
         Row: {
           company_name: string
@@ -24,9 +54,12 @@ export type Database = {
           description: string | null
           id: string
           industry: string | null
+          is_suspended: boolean | null
           location: string | null
           logo_url: string | null
           profile_id: string
+          suspended_at: string | null
+          suspension_reason: string | null
           updated_at: string | null
           website: string | null
         }
@@ -39,9 +72,12 @@ export type Database = {
           description?: string | null
           id?: string
           industry?: string | null
+          is_suspended?: boolean | null
           location?: string | null
           logo_url?: string | null
           profile_id: string
+          suspended_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string | null
           website?: string | null
         }
@@ -54,9 +90,12 @@ export type Database = {
           description?: string | null
           id?: string
           industry?: string | null
+          is_suspended?: boolean | null
           location?: string | null
           logo_url?: string | null
           profile_id?: string
+          suspended_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string | null
           website?: string | null
         }
@@ -124,6 +163,147 @@ export type Database = {
           },
         ]
       }
+      disputes: {
+        Row: {
+          connection_request_id: string | null
+          created_at: string | null
+          description: string
+          dispute_type: string
+          id: string
+          reported_profile_id: string
+          reporter_profile_id: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          connection_request_id?: string | null
+          created_at?: string | null
+          description: string
+          dispute_type: string
+          id?: string
+          reported_profile_id: string
+          reporter_profile_id: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          connection_request_id?: string | null
+          created_at?: string | null
+          description?: string
+          dispute_type?: string
+          id?: string
+          reported_profile_id?: string
+          reporter_profile_id?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_connection_request_id_fkey"
+            columns: ["connection_request_id"]
+            isOneToOne: false
+            referencedRelation: "connection_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_reported_profile_id_fkey"
+            columns: ["reported_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_reporter_profile_id_fkey"
+            columns: ["reporter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      id_verifications: {
+        Row: {
+          created_at: string | null
+          document_type: string
+          document_url: string
+          id: string
+          rejection_reason: string | null
+          status: string | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_type: string
+          document_url: string
+          id?: string
+          rejection_reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: string
+          document_url?: string
+          id?: string
+          rejection_reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "id_verifications_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -148,13 +328,65 @@ export type Database = {
         }
         Relationships: []
       }
+      qualification_uploads: {
+        Row: {
+          created_at: string | null
+          document_url: string
+          id: string
+          qualification_type: string
+          rejection_reason: string | null
+          status: string | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_url: string
+          id?: string
+          qualification_type: string
+          rejection_reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_url?: string
+          id?: string
+          qualification_type?: string
+          rejection_reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qualification_uploads_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           connection_request_id: string
           content: string
           created_at: string | null
+          flagged_reason: string | null
           helpful_count: number | null
           id: string
+          is_flagged: boolean | null
+          is_hidden: boolean | null
+          moderated_at: string | null
+          moderated_by: string | null
           rating: number
           rating_categories: Json | null
           reviewee_profile_id: string
@@ -167,8 +399,13 @@ export type Database = {
           connection_request_id: string
           content: string
           created_at?: string | null
+          flagged_reason?: string | null
           helpful_count?: number | null
           id?: string
+          is_flagged?: boolean | null
+          is_hidden?: boolean | null
+          moderated_at?: string | null
+          moderated_by?: string | null
           rating: number
           rating_categories?: Json | null
           reviewee_profile_id: string
@@ -181,8 +418,13 @@ export type Database = {
           connection_request_id?: string
           content?: string
           created_at?: string | null
+          flagged_reason?: string | null
           helpful_count?: number | null
           id?: string
+          is_flagged?: boolean | null
+          is_hidden?: boolean | null
+          moderated_at?: string | null
+          moderated_by?: string | null
           rating?: number
           rating_categories?: Json | null
           reviewee_profile_id?: string
@@ -446,6 +688,7 @@ export type Database = {
           hourly_rate_min: number | null
           id: string
           industries: string[] | null
+          is_suspended: boolean | null
           languages: Json | null
           location: string | null
           location_constraints: string | null
@@ -462,6 +705,8 @@ export type Database = {
           qualifications: string | null
           rate_negotiable: boolean | null
           roles: Database["public"]["Enums"]["finance_role"][]
+          suspended_at: string | null
+          suspension_reason: string | null
           systems: string[] | null
           total_hours_per_week: number | null
           travel_time_minutes: number | null
@@ -479,6 +724,7 @@ export type Database = {
           hourly_rate_min?: number | null
           id?: string
           industries?: string[] | null
+          is_suspended?: boolean | null
           languages?: Json | null
           location?: string | null
           location_constraints?: string | null
@@ -495,6 +741,8 @@ export type Database = {
           qualifications?: string | null
           rate_negotiable?: boolean | null
           roles?: Database["public"]["Enums"]["finance_role"][]
+          suspended_at?: string | null
+          suspension_reason?: string | null
           systems?: string[] | null
           total_hours_per_week?: number | null
           travel_time_minutes?: number | null
@@ -514,6 +762,7 @@ export type Database = {
           hourly_rate_min?: number | null
           id?: string
           industries?: string[] | null
+          is_suspended?: boolean | null
           languages?: Json | null
           location?: string | null
           location_constraints?: string | null
@@ -530,6 +779,8 @@ export type Database = {
           qualifications?: string | null
           rate_negotiable?: boolean | null
           roles?: Database["public"]["Enums"]["finance_role"][]
+          suspended_at?: string | null
+          suspension_reason?: string | null
           systems?: string[] | null
           total_hours_per_week?: number | null
           travel_time_minutes?: number | null
