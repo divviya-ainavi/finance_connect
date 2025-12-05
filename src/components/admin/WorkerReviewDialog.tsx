@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,10 +15,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Loader2, CheckCircle, XCircle, User, FileText, 
-  GraduationCap, Users, Shield, ExternalLink, Clock,
-  CheckCircle2, AlertCircle
+import {
+  Loader2,
+  CheckCircle,
+  XCircle,
+  User,
+  FileText,
+  GraduationCap,
+  Users,
+  Shield,
+  ExternalLink,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -71,19 +87,25 @@ interface WorkerReviewDialogProps {
   onApprovalComplete: () => void;
 }
 
-export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: WorkerReviewDialogProps) => {
+export const WorkerReviewDialog = ({
+  worker,
+  onClose,
+  onApprovalComplete,
+}: WorkerReviewDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [approvalNotes, setApprovalNotes] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   // Verification data
   const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
   const [references, setReferences] = useState<Reference[]>([]);
   const [idVerifications, setIdVerifications] = useState<IdVerification[]>([]);
-  const [qualifications, setQualifications] = useState<QualificationUpload[]>([]);
-  
+  const [qualifications, setQualifications] = useState<QualificationUpload[]>(
+    []
+  );
+
   // Individual action states
   const [processingItem, setProcessingItem] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -97,7 +119,7 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
 
   const fetchVerificationData = async () => {
     if (!worker) return;
-    
+
     setLoading(true);
     try {
       // Fetch all verification data in parallel
@@ -140,8 +162,10 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
 
     setProcessing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       const { error } = await supabase
         .from("worker_profiles")
         .update({
@@ -156,7 +180,9 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
 
       toast({
         title: status === "active" ? "Worker approved" : "Worker declined",
-        description: `${worker.name} has been ${status === "active" ? "approved and is now live" : "declined"}.`,
+        description: `${worker.name} has been ${
+          status === "active" ? "approved and is now live" : "declined"
+        }.`,
       });
 
       onApprovalComplete();
@@ -171,15 +197,18 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
     }
   };
 
-  const handleReferenceAction = async (refId: string, status: "verified" | "declined") => {
+  const handleReferenceAction = async (
+    refId: string,
+    status: "verified" | "declined"
+  ) => {
     setProcessingItem(refId);
     try {
       const { error } = await supabase
         .from("worker_references")
-        .update({ 
-          status, 
+        .update({
+          status,
           admin_notes: adminNotes || null,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", refId);
 
@@ -189,25 +218,34 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
       setAdminNotes("");
       fetchVerificationData();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setProcessingItem(null);
     }
   };
 
-  const handleIdVerificationAction = async (idVerId: string, status: "verified" | "rejected") => {
+  const handleIdVerificationAction = async (
+    idVerId: string,
+    status: "verified" | "rejected"
+  ) => {
     setProcessingItem(idVerId);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       const { error } = await supabase
         .from("id_verifications")
-        .update({ 
+        .update({
           status,
           rejection_reason: status === "rejected" ? rejectionReason : null,
           verified_at: status === "verified" ? new Date().toISOString() : null,
           verified_by: status === "verified" ? user?.id : null,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", idVerId);
 
@@ -217,25 +255,34 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
       setRejectionReason("");
       fetchVerificationData();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setProcessingItem(null);
     }
   };
 
-  const handleQualificationAction = async (qualId: string, status: "verified" | "rejected") => {
+  const handleQualificationAction = async (
+    qualId: string,
+    status: "verified" | "rejected"
+  ) => {
     setProcessingItem(qualId);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       const { error } = await supabase
         .from("qualification_uploads")
-        .update({ 
+        .update({
           status,
           rejection_reason: status === "rejected" ? rejectionReason : null,
           verified_at: status === "verified" ? new Date().toISOString() : null,
           verified_by: status === "verified" ? user?.id : null,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", qualId);
 
@@ -245,7 +292,11 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
       setRejectionReason("");
       fetchVerificationData();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setProcessingItem(null);
     }
@@ -267,7 +318,7 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
   };
 
   const formatQualification = (type: string) => {
-    return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   const getStatusBadge = (status: string) => {
@@ -286,11 +337,15 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
   };
 
   // Calculate verification summary
-  const testsVerified = testAttempts.some(t => t.passed);
-  const refsVerified = references.some(r => r.status === "verified");
-  const idVerified = idVerifications.some(v => !v.is_insurance && v.status === "verified");
-  const insuranceVerified = idVerifications.some(v => v.is_insurance && v.status === "verified");
-  const qualsVerified = qualifications.some(q => q.status === "verified");
+  const testsVerified = testAttempts.some((t) => t.passed);
+  const refsVerified = references.some((r) => r.status === "verified");
+  const idVerified = idVerifications.some(
+    (v) => !v.is_insurance && v.status === "verified"
+  );
+  const insuranceVerified = idVerifications.some(
+    (v) => v.is_insurance && v.status === "verified"
+  );
+  const qualsVerified = qualifications.some((q) => q.status === "verified");
 
   if (!worker) return null;
 
@@ -315,22 +370,32 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
           <ScrollArea className="max-h-[60vh]">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                <TabsTrigger value="overview" className="text-xs">
+                  Overview
+                </TabsTrigger>
                 <TabsTrigger value="tests" className="text-xs">
                   Skills Tests
-                  {testsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-green-500" />}
+                  {testsVerified && (
+                    <CheckCircle2 className="ml-1 h-3 w-3 text-green-500" />
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="references" className="text-xs">
                   References
-                  {refsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-green-500" />}
+                  {refsVerified && (
+                    <CheckCircle2 className="ml-1 h-3 w-3 text-green-500" />
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="id" className="text-xs">
                   ID & Insurance
-                  {idVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-green-500" />}
+                  {idVerified && (
+                    <CheckCircle2 className="ml-1 h-3 w-3 text-green-500" />
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="qualifications" className="text-xs">
                   Qualifications
-                  {qualsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-green-500" />}
+                  {qualsVerified && (
+                    <CheckCircle2 className="ml-1 h-3 w-3 text-green-500" />
+                  )}
                 </TabsTrigger>
               </TabsList>
 
@@ -342,42 +407,82 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                       <CardTitle className="text-sm">Basic Info</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
-                      <div><span className="font-medium">Name:</span> {worker.name}</div>
-                      <div><span className="font-medium">Location:</span> {worker.location || "Not specified"}</div>
-                      <div><span className="font-medium">Roles:</span> {worker.roles?.map(r => getRoleLabel(r)).join(", ") || "None"}</div>
-                      <div><span className="font-medium">Registered:</span> {new Date(worker.created_at).toLocaleDateString()}</div>
+                      <div>
+                        <span className="font-medium">Name:</span> {worker.name}
+                      </div>
+                      <div>
+                        <span className="font-medium">Location:</span>{" "}
+                        {worker.location || "Not specified"}
+                      </div>
+                      <div>
+                        <span className="font-medium">Roles:</span>{" "}
+                        {worker.roles?.map((r) => getRoleLabel(r)).join(", ") ||
+                          "None"}
+                      </div>
+                      <div>
+                        <span className="font-medium">Registered:</span>{" "}
+                        {new Date(worker.created_at).toLocaleDateString()}
+                      </div>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Verification Summary</CardTitle>
+                      <CardTitle className="text-sm">
+                        Verification Summary
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                       <div className="flex items-center justify-between">
                         <span>Skills Tests</span>
-                        {testsVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-muted-foreground" />}
+                        {testsVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
                         <span>References</span>
-                        {refsVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-muted-foreground" />}
+                        {refsVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
                         <span>ID Verification</span>
-                        {idVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-muted-foreground" />}
+                        {idVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
                         <span>Insurance</span>
-                        {insuranceVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-muted-foreground" />}
+                        {insuranceVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
                         <span>Qualifications</span>
-                        {qualsVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-muted-foreground" />}
+                        {qualsVerified ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                       <Separator className="my-2" />
                       <div className="flex items-center justify-between font-medium">
                         <span>Overall Score</span>
-                        <Badge variant={worker.verification_score >= 75 ? "default" : "secondary"}>
+                        <Badge
+                          variant={
+                            worker.verification_score >= 75
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
                           {worker.verification_score}%
                         </Badge>
                       </div>
@@ -386,7 +491,9 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Approval Notes (optional)</label>
+                  <label className="text-sm font-medium">
+                    Approval Notes (optional)
+                  </label>
                   <Textarea
                     value={approvalNotes}
                     onChange={(e) => setApprovalNotes(e.target.value)}
@@ -407,18 +514,32 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                   </CardHeader>
                   <CardContent>
                     {testAttempts.length === 0 ? (
-                      <p className="text-muted-foreground text-sm py-4">No test attempts yet.</p>
+                      <p className="text-muted-foreground text-sm py-4">
+                        No test attempts yet.
+                      </p>
                     ) : (
                       <div className="space-y-3">
                         {testAttempts.map((test) => (
-                          <div key={test.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div
+                            key={test.id}
+                            className="flex items-center justify-between p-3 border rounded-lg"
+                          >
                             <div>
-                              <p className="font-medium">{getRoleLabel(test.role)}</p>
+                              <p className="font-medium">
+                                {getRoleLabel(test.role)}
+                              </p>
                               <p className="text-sm text-muted-foreground">
-                                Score: {test.score}% • {new Date(test.attempted_at).toLocaleDateString()}
+                                Score: {test.score}% •{" "}
+                                {new Date(
+                                  test.attempted_at
+                                ).toLocaleDateString()}
                               </p>
                             </div>
-                            <Badge className={test.passed ? "bg-green-500" : "bg-red-500"}>
+                            <Badge
+                              className={
+                                test.passed ? "bg-green-500" : "bg-red-500"
+                              }
+                            >
                               {test.passed ? "Passed" : "Failed"}
                             </Badge>
                           </div>
@@ -440,15 +561,24 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                   </CardHeader>
                   <CardContent>
                     {references.length === 0 ? (
-                      <p className="text-muted-foreground text-sm py-4">No references submitted.</p>
+                      <p className="text-muted-foreground text-sm py-4">
+                        No references submitted.
+                      </p>
                     ) : (
                       <div className="space-y-4">
                         {references.map((ref) => (
-                          <div key={ref.id} className="p-3 border rounded-lg space-y-3">
+                          <div
+                            key={ref.id}
+                            className="p-3 border rounded-lg space-y-3"
+                          >
                             <div className="flex items-start justify-between">
                               <div>
-                                <p className="font-medium">{ref.referee_name}</p>
-                                <p className="text-sm text-muted-foreground">{ref.referee_email}</p>
+                                <p className="font-medium">
+                                  {ref.referee_name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {ref.referee_email}
+                                </p>
                                 {ref.referee_company && (
                                   <p className="text-sm text-muted-foreground">
                                     {ref.referee_role} at {ref.referee_company}
@@ -457,13 +587,17 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                               </div>
                               {getStatusBadge(ref.status || "pending")}
                             </div>
-                            
+
                             {ref.status === "pending" && (
                               <div className="space-y-2">
                                 <Textarea
                                   placeholder="Admin notes (optional)..."
-                                  value={processingItem === ref.id ? adminNotes : ""}
-                                  onChange={(e) => setAdminNotes(e.target.value)}
+                                  value={
+                                    processingItem === ref.id ? adminNotes : ""
+                                  }
+                                  onChange={(e) =>
+                                    setAdminNotes(e.target.value)
+                                  }
                                   rows={2}
                                   className="text-sm"
                                 />
@@ -471,14 +605,18 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleReferenceAction(ref.id, "declined")}
+                                    onClick={() =>
+                                      handleReferenceAction(ref.id, "declined")
+                                    }
                                     disabled={processingItem === ref.id}
                                   >
                                     <XCircle className="mr-1 h-3 w-3" /> Decline
                                   </Button>
                                   <Button
                                     size="sm"
-                                    onClick={() => handleReferenceAction(ref.id, "verified")}
+                                    onClick={() =>
+                                      handleReferenceAction(ref.id, "verified")
+                                    }
                                     disabled={processingItem === ref.id}
                                   >
                                     {processingItem === ref.id ? (
@@ -510,37 +648,56 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                   </CardHeader>
                   <CardContent>
                     {idVerifications.length === 0 ? (
-                      <p className="text-muted-foreground text-sm py-4">No documents uploaded.</p>
+                      <p className="text-muted-foreground text-sm py-4">
+                        No documents uploaded.
+                      </p>
                     ) : (
                       <div className="space-y-4">
                         {idVerifications.map((doc) => (
-                          <div key={doc.id} className="p-3 border rounded-lg space-y-3">
+                          <div
+                            key={doc.id}
+                            className="p-3 border rounded-lg space-y-3"
+                          >
                             <div className="flex items-start justify-between">
                               <div>
                                 <p className="font-medium">
-                                  {doc.is_insurance ? "Insurance Document" : "ID Document"}
+                                  {doc.is_insurance
+                                    ? "Insurance Document"
+                                    : "ID Document"}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  Type: {doc.document_type} • {new Date(doc.created_at).toLocaleDateString()}
+                                  Type: {doc.document_type} •{" "}
+                                  {new Date(
+                                    doc.created_at
+                                  ).toLocaleDateString()}
                                 </p>
                                 <Button
                                   variant="link"
                                   size="sm"
                                   className="p-0 h-auto text-primary"
-                                  onClick={() => window.open(doc.document_url, "_blank")}
+                                  onClick={() =>
+                                    window.open(doc.document_url, "_blank")
+                                  }
                                 >
-                                  <ExternalLink className="mr-1 h-3 w-3" /> View Document
+                                  <ExternalLink className="mr-1 h-3 w-3" /> View
+                                  Document
                                 </Button>
                               </div>
                               {getStatusBadge(doc.status || "pending")}
                             </div>
-                            
+
                             {doc.status === "pending" && (
                               <div className="space-y-2">
                                 <Textarea
                                   placeholder="Rejection reason (if rejecting)..."
-                                  value={processingItem === doc.id ? rejectionReason : ""}
-                                  onChange={(e) => setRejectionReason(e.target.value)}
+                                  value={
+                                    processingItem === doc.id
+                                      ? rejectionReason
+                                      : ""
+                                  }
+                                  onChange={(e) =>
+                                    setRejectionReason(e.target.value)
+                                  }
                                   rows={2}
                                   className="text-sm"
                                 />
@@ -548,14 +705,24 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleIdVerificationAction(doc.id, "rejected")}
+                                    onClick={() =>
+                                      handleIdVerificationAction(
+                                        doc.id,
+                                        "rejected"
+                                      )
+                                    }
                                     disabled={processingItem === doc.id}
                                   >
                                     <XCircle className="mr-1 h-3 w-3" /> Reject
                                   </Button>
                                   <Button
                                     size="sm"
-                                    onClick={() => handleIdVerificationAction(doc.id, "verified")}
+                                    onClick={() =>
+                                      handleIdVerificationAction(
+                                        doc.id,
+                                        "verified"
+                                      )
+                                    }
                                     disabled={processingItem === doc.id}
                                   >
                                     {processingItem === doc.id ? (
@@ -568,7 +735,7 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                                 </div>
                               </div>
                             )}
-                            
+
                             {doc.rejection_reason && (
                               <p className="text-sm text-destructive">
                                 Rejection reason: {doc.rejection_reason}
@@ -593,35 +760,54 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                   </CardHeader>
                   <CardContent>
                     {qualifications.length === 0 ? (
-                      <p className="text-muted-foreground text-sm py-4">No qualifications uploaded.</p>
+                      <p className="text-muted-foreground text-sm py-4">
+                        No qualifications uploaded.
+                      </p>
                     ) : (
                       <div className="space-y-4">
                         {qualifications.map((qual) => (
-                          <div key={qual.id} className="p-3 border rounded-lg space-y-3">
+                          <div
+                            key={qual.id}
+                            className="p-3 border rounded-lg space-y-3"
+                          >
                             <div className="flex items-start justify-between">
                               <div>
-                                <p className="font-medium">{formatQualification(qual.qualification_type)}</p>
+                                <p className="font-medium">
+                                  {formatQualification(qual.qualification_type)}
+                                </p>
                                 <p className="text-sm text-muted-foreground">
-                                  Submitted: {new Date(qual.created_at).toLocaleDateString()}
+                                  Submitted:{" "}
+                                  {new Date(
+                                    qual.created_at
+                                  ).toLocaleDateString()}
                                 </p>
                                 <Button
                                   variant="link"
                                   size="sm"
                                   className="p-0 h-auto text-primary"
-                                  onClick={() => window.open(qual.document_url, "_blank")}
+                                  onClick={() =>
+                                    window.open(qual.document_url, "_blank")
+                                  }
                                 >
-                                  <ExternalLink className="mr-1 h-3 w-3" /> View Certificate
+                                  <ExternalLink className="mr-1 h-3 w-3" /> View
+                                  Certificate
                                 </Button>
                               </div>
                               {getStatusBadge(qual.status || "pending")}
                             </div>
-                            
+
                             {qual.status === "pending" && (
                               <div className="space-y-2">
                                 <Textarea
                                   placeholder="Rejection reason (if rejecting)..."
-                                  value={processingItem === qual.id ? rejectionReason : ""}
-                                  onChange={(e) => setRejectionReason(e.target.value)}
+                                  value={
+                                    processingItem === qual.id
+                                      ? rejectionReason
+                                      : ""
+                                  }
+                                  onChange={(e) =>
+                                    setRejectionReason(e.target.value)
+                                  }
                                   rows={2}
                                   className="text-sm"
                                 />
@@ -629,14 +815,24 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleQualificationAction(qual.id, "rejected")}
+                                    onClick={() =>
+                                      handleQualificationAction(
+                                        qual.id,
+                                        "rejected"
+                                      )
+                                    }
                                     disabled={processingItem === qual.id}
                                   >
                                     <XCircle className="mr-1 h-3 w-3" /> Reject
                                   </Button>
                                   <Button
                                     size="sm"
-                                    onClick={() => handleQualificationAction(qual.id, "verified")}
+                                    onClick={() =>
+                                      handleQualificationAction(
+                                        qual.id,
+                                        "verified"
+                                      )
+                                    }
                                     disabled={processingItem === qual.id}
                                   >
                                     {processingItem === qual.id ? (
@@ -649,7 +845,7 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
                                 </div>
                               </div>
                             )}
-                            
+
                             {qual.rejection_reason && (
                               <p className="text-sm text-destructive">
                                 Rejection reason: {qual.rejection_reason}
@@ -691,7 +887,7 @@ export const WorkerReviewDialog = ({ worker, onClose, onApprovalComplete }: Work
             ) : (
               <CheckCircle className="mr-2 h-4 w-4" />
             )}
-            Approve & Go Live
+            Approve
           </Button>
         </DialogFooter>
       </DialogContent>
