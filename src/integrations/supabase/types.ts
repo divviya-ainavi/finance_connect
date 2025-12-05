@@ -236,6 +236,7 @@ export type Database = {
           document_type: string
           document_url: string
           id: string
+          is_insurance: boolean | null
           rejection_reason: string | null
           status: string | null
           updated_at: string | null
@@ -248,6 +249,7 @@ export type Database = {
           document_type: string
           document_url: string
           id?: string
+          is_insurance?: boolean | null
           rejection_reason?: string | null
           status?: string | null
           updated_at?: string | null
@@ -260,6 +262,7 @@ export type Database = {
           document_type?: string
           document_url?: string
           id?: string
+          is_insurance?: boolean | null
           rejection_reason?: string | null
           status?: string | null
           updated_at?: string | null
@@ -843,6 +846,10 @@ export type Database = {
       }
       worker_profiles: {
         Row: {
+          approval_notes: string | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           availability: Json | null
           availability_exceptions: Json | null
           available_from: string | null
@@ -879,6 +886,10 @@ export type Database = {
           visibility_mode: Database["public"]["Enums"]["visibility_mode"] | null
         }
         Insert: {
+          approval_notes?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           availability?: Json | null
           availability_exceptions?: Json | null
           available_from?: string | null
@@ -917,6 +928,10 @@ export type Database = {
             | null
         }
         Update: {
+          approval_notes?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           availability?: Json | null
           availability_exceptions?: Json | null
           available_from?: string | null
