@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { VerificationScoreBox } from "@/components/worker/VerificationScoreBox";
+import { IdInsuranceUpload } from "@/components/worker/IdInsuranceUpload";
 
 interface TestAttempt {
   role: string;
@@ -27,6 +29,22 @@ interface Reference {
   status: string;
 }
 
+interface IdVerification {
+  id: string;
+  document_type: string;
+  document_url: string;
+  status: string;
+  rejection_reason: string | null;
+  is_insurance: boolean;
+  created_at: string;
+}
+
+interface VerificationStatus {
+  testing_status: string;
+  references_status: string;
+  interview_status: string;
+}
+
 const Verification = () => {
   const { user, userType } = useAuth();
   const navigate = useNavigate();
@@ -36,6 +54,9 @@ const Verification = () => {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
   const [references, setReferences] = useState<Reference[]>([]);
+  const [idVerifications, setIdVerifications] = useState<IdVerification[]>([]);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
+  const [approvalStatus, setApprovalStatus] = useState("pending");
   const [showAddReference, setShowAddReference] = useState(false);
   const [newReference, setNewReference] = useState({
     name: "",
@@ -64,14 +85,25 @@ const Verification = () => {
 
       const { data: workerProfile } = await supabase
         .from("worker_profiles")
-        .select("id, roles")
+        .select("id, roles, approval_status")
         .eq("profile_id", profile.id)
         .single();
 
       if (workerProfile) {
         setWorkerProfileId(workerProfile.id);
         setSelectedRoles(workerProfile.roles || []);
+        setApprovalStatus(workerProfile.approval_status || "pending");
 
+        // Fetch verification status
+        const { data: verStatus } = await supabase
+          .from("verification_statuses")
+          .select("*")
+          .eq("worker_profile_id", workerProfile.id)
+          .single();
+
+        setVerificationStatus(verStatus);
+
+        // Fetch test attempts
         const { data: attempts } = await supabase
           .from("test_attempts")
           .select("*")
@@ -80,6 +112,7 @@ const Verification = () => {
 
         setTestAttempts(attempts || []);
 
+        // Fetch references
         const { data: refs } = await supabase
           .from("worker_references")
           .select("*")
@@ -87,6 +120,15 @@ const Verification = () => {
           .order("created_at", { ascending: false });
 
         setReferences(refs || []);
+
+        // Fetch ID verifications
+        const { data: idVers } = await supabase
+          .from("id_verifications")
+          .select("*")
+          .eq("worker_profile_id", workerProfile.id)
+          .order("created_at", { ascending: false });
+
+        setIdVerifications(idVers || []);
       }
     } catch (error) {
       console.error("Error fetching verification data:", error);
@@ -167,6 +209,27 @@ const Verification = () => {
     return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
   };
 
+  // Calculate overall statuses for score box
+  const getIdVerificationStatus = () => {
+    const idDocs = idVerifications.filter((v) => !v.is_insurance);
+    if (idDocs.length === 0) return "not_submitted";
+    const verified = idDocs.some((v) => v.status === "verified");
+    if (verified) return "verified";
+    const rejected = idDocs.every((v) => v.status === "rejected");
+    if (rejected) return "rejected";
+    return "pending";
+  };
+
+  const getInsuranceStatus = () => {
+    const insuranceDocs = idVerifications.filter((v) => v.is_insurance);
+    if (insuranceDocs.length === 0) return "not_submitted";
+    const verified = insuranceDocs.some((v) => v.status === "verified");
+    if (verified) return "verified";
+    const rejected = insuranceDocs.every((v) => v.status === "rejected");
+    if (rejected) return "rejected";
+    return "pending";
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -177,7 +240,7 @@ const Verification = () => {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Verification</h1>
           <Button variant="outline" onClick={() => navigate("/worker/dashboard")}>
@@ -185,140 +248,178 @@ const Verification = () => {
           </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Skills Testing</CardTitle>
-            <CardDescription>
-              Complete a test for each role you offer. Pass rate: 80% or higher.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedRoles.map((role) => {
-              const testStatus = getRoleTestStatus(role);
-              const StatusIcon = testStatus.icon;
-              
-              return (
-                <div
-                  key={role}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <StatusIcon className="h-5 w-5" />
-                    <div>
-                      <p className="font-medium">{getRoleLabel(role)}</p>
-                      {testStatus.status === "locked" && (
-                        <p className="text-sm text-muted-foreground">
-                          Locked until {new Date(testStatus.lockoutDate!).toLocaleDateString()}
-                        </p>
-                      )}
-                      {testStatus.status === "passed" && (
-                        <p className="text-sm text-muted-foreground">Test passed</p>
-                      )}
-                      {testStatus.status === "failed" && (
-                        <p className="text-sm text-muted-foreground">Test failed - retry available</p>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => navigate(`/worker/test/${role}`)}
-                    disabled={testStatus.status === "locked" || testStatus.status === "passed"}
-                  >
-                    {testStatus.status === "not_started" ? "Start Test" : "Retake Test"}
-                  </Button>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>References</CardTitle>
-            <CardDescription>
-              Add professional references to verify your experience.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {references.map((ref) => (
-              <div key={ref.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium">{ref.referee_name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {ref.referee_role} at {ref.referee_company}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Skills Testing */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Step 1: Skills Testing</CardTitle>
+                <CardDescription>
+                  Complete a test for each role you offer. Pass rate: 80% or higher.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {selectedRoles.length === 0 ? (
+                  <p className="text-muted-foreground">
+                    No roles selected. <Button variant="link" className="p-0" onClick={() => navigate("/worker/profile")}>Update your profile</Button> to select roles.
                   </p>
-                  <p className="text-sm text-muted-foreground">{ref.referee_email}</p>
-                </div>
-                {getStatusBadge(ref.status)}
-              </div>
-            ))}
-            
-            {showAddReference ? (
-              <form onSubmit={handleAddReference} className="space-y-4 border p-4 rounded-lg">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Name</Label>
-                    <Input
-                      value={newReference.name}
-                      onChange={(e) => setNewReference({ ...newReference, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={newReference.email}
-                      onChange={(e) => setNewReference({ ...newReference, email: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Input
-                      value={newReference.role}
-                      onChange={(e) => setNewReference({ ...newReference, role: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Company</Label>
-                    <Input
-                      value={newReference.company}
-                      onChange={(e) => setNewReference({ ...newReference, company: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit">Add Reference</Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowAddReference(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            ) : (
-              <Button onClick={() => setShowAddReference(true)} variant="outline">
-                Add Reference
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+                ) : (
+                  selectedRoles.map((role) => {
+                    const testStatus = getRoleTestStatus(role);
+                    const StatusIcon = testStatus.icon;
+                    
+                    return (
+                      <div
+                        key={role}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <StatusIcon className="h-5 w-5" />
+                          <div>
+                            <p className="font-medium">{getRoleLabel(role)}</p>
+                            {testStatus.status === "locked" && (
+                              <p className="text-sm text-muted-foreground">
+                                Locked until {new Date(testStatus.lockoutDate!).toLocaleDateString()}
+                              </p>
+                            )}
+                            {testStatus.status === "passed" && (
+                              <p className="text-sm text-muted-foreground">Test passed</p>
+                            )}
+                            {testStatus.status === "failed" && (
+                              <p className="text-sm text-muted-foreground">Test failed - retry available</p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => navigate(`/worker/test/${role}`)}
+                          disabled={testStatus.status === "locked" || testStatus.status === "passed"}
+                        >
+                          {testStatus.status === "not_started" ? "Start Test" : "Retake Test"}
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Interview</CardTitle>
-            <CardDescription>Coming soon - video interview scheduling</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              This feature will be available in a future update.
-            </p>
-          </CardContent>
-        </Card>
+            {/* References */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Step 2: References</CardTitle>
+                <CardDescription>
+                  Add professional references to verify your experience.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {references.map((ref) => (
+                  <div key={ref.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{ref.referee_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {ref.referee_role} at {ref.referee_company}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{ref.referee_email}</p>
+                    </div>
+                    {getStatusBadge(ref.status)}
+                  </div>
+                ))}
+                
+                {showAddReference ? (
+                  <form onSubmit={handleAddReference} className="space-y-4 border p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Name</Label>
+                        <Input
+                          value={newReference.name}
+                          onChange={(e) => setNewReference({ ...newReference, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          value={newReference.email}
+                          onChange={(e) => setNewReference({ ...newReference, email: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Role</Label>
+                        <Input
+                          value={newReference.role}
+                          onChange={(e) => setNewReference({ ...newReference, role: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Company</Label>
+                        <Input
+                          value={newReference.company}
+                          onChange={(e) => setNewReference({ ...newReference, company: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit">Add Reference</Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowAddReference(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <Button onClick={() => setShowAddReference(true)} variant="outline">
+                    Add Reference
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* ID & Insurance Verification */}
+            {workerProfileId && user && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Step 3: ID & Insurance Verification</h2>
+                <IdInsuranceUpload
+                  workerProfileId={workerProfileId}
+                  userId={user.id}
+                  idVerifications={idVerifications}
+                  onRefresh={fetchVerificationData}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar - Verification Score */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-6">
+              <VerificationScoreBox
+                testingStatus={verificationStatus?.testing_status || "not_started"}
+                referencesStatus={verificationStatus?.references_status || "not_started"}
+                idVerificationStatus={getIdVerificationStatus()}
+                insuranceStatus={getInsuranceStatus()}
+                approvalStatus={approvalStatus}
+              />
+
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle className="text-sm">Need Help?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Complete all verification steps to increase your visibility and be approved to go live on the platform.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
