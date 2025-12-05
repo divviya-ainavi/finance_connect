@@ -15,7 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Ban, CheckCircle, User, MapPin, Briefcase, 
   Clock, Calendar, Languages, GraduationCap, Shield, 
-  FileText, Building2, Laptop, Star, Globe, Mail
+  FileText, Building2, Laptop, Star, Globe, Mail, XCircle,
+  ExternalLink, Loader2
 } from 'lucide-react';
 
 interface WorkerProfile {
@@ -93,8 +94,10 @@ interface Reference {
 interface IdVerification {
   id: string;
   document_type: string;
+  document_url: string;
   status: string;
   is_insurance: boolean;
+  rejection_reason: string | null;
 }
 
 const roleLabels: Record<string, string> = {
@@ -130,6 +133,8 @@ export default function WorkerDetail() {
   const [suspensionReason, setSuspensionReason] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [processingItem, setProcessingItem] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     if (id) fetchWorkerData();
@@ -208,6 +213,72 @@ export default function WorkerDetail() {
     setActionLoading(false);
   };
 
+  const handleReferenceAction = async (refId: string, status: 'verified' | 'declined') => {
+    setProcessingItem(refId);
+    try {
+      const { error } = await supabase
+        .from('worker_references')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', refId);
+
+      if (error) throw error;
+
+      toast({ title: `Reference ${status}` });
+      setReferences(refs => refs.map(r => r.id === refId ? { ...r, status } : r));
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessingItem(null);
+    }
+  };
+
+  const handleIdVerificationAction = async (docId: string, status: 'verified' | 'rejected') => {
+    setProcessingItem(docId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from('id_verifications')
+        .update({
+          status,
+          rejection_reason: status === 'rejected' ? rejectionReason : null,
+          verified_at: status === 'verified' ? new Date().toISOString() : null,
+          verified_by: status === 'verified' ? user?.id : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', docId);
+
+      if (error) throw error;
+
+      toast({ title: `Document ${status}` });
+      setIdVerifications(docs => docs.map(d => d.id === docId ? { ...d, status, rejection_reason: status === 'rejected' ? rejectionReason : null } : d));
+      setRejectionReason('');
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessingItem(null);
+    }
+  };
+
+  const handleOverrideTestResult = async (testId: string, passed: boolean) => {
+    setProcessingItem(testId);
+    try {
+      const { error } = await supabase
+        .from('test_attempts')
+        .update({ passed })
+        .eq('id', testId);
+
+      if (error) throw error;
+
+      toast({ title: `Test result ${passed ? 'passed' : 'failed'} (overridden)` });
+      setTestAttempts(tests => tests.map(t => t.id === testId ? { ...t, passed } : t));
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessingItem(null);
+    }
+  };
+
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   
   const formatQualification = (type: string) => type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -232,7 +303,7 @@ export default function WorkerDetail() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </AdminLayout>
     );
@@ -571,69 +642,232 @@ export default function WorkerDetail() {
               </CardContent>
             </Card>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Test Attempts */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Skills Test Attempts</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {testAttempts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No test attempts</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {testAttempts.map(test => (
-                        <div key={test.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            {/* Test Attempts with Override */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Skills Test Attempts</CardTitle>
+                <CardDescription>View test results and override if needed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {testAttempts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No test attempts</p>
+                ) : (
+                  <div className="space-y-3">
+                    {testAttempts.map(test => (
+                      <div key={test.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{roleLabels[test.role] || test.role}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Score: {test.score}% • {new Date(test.attempted_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge className={test.passed ? 'bg-emerald-500' : 'bg-destructive'}>
+                            {test.passed ? 'Passed' : 'Failed'}
+                          </Badge>
+                          <div className="flex gap-2">
+                            {!test.passed && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOverrideTestResult(test.id, true)}
+                                disabled={processingItem === test.id}
+                              >
+                                {processingItem === test.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Override Pass
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            {test.passed && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOverrideTestResult(test.id, false)}
+                                disabled={processingItem === test.id}
+                              >
+                                {processingItem === test.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Revoke Pass
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* References with Verification Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>References</CardTitle>
+                <CardDescription>Verify or decline submitted references</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {references.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No references submitted</p>
+                ) : (
+                  <div className="space-y-4">
+                    {references.map(ref => (
+                      <div key={ref.id} className="p-4 border rounded-lg space-y-3">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-medium">{roleLabels[test.role] || test.role}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(test.attempted_at).toLocaleDateString()}
+                            <p className="font-medium">{ref.referee_name}</p>
+                            <p className="text-sm text-muted-foreground">{ref.referee_role} at {ref.referee_company}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                              <Mail className="h-3 w-3" /> {ref.referee_email}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{test.score}%</span>
-                            <Badge className={test.passed ? 'bg-emerald-500' : 'bg-destructive'}>
-                              {test.passed ? 'Passed' : 'Failed'}
-                            </Badge>
-                          </div>
+                          <Badge className={
+                            ref.status === 'verified' ? 'bg-emerald-500' : 
+                            ref.status === 'declined' ? 'bg-destructive' : ''
+                          }>
+                            {ref.status || 'pending'}
+                          </Badge>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
 
-              {/* References */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>References</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {references.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No references submitted</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {references.map(ref => (
-                        <div key={ref.id} className="p-3 bg-muted/50 rounded-lg">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium">{ref.referee_name}</p>
-                              <p className="text-sm text-muted-foreground">{ref.referee_role} at {ref.referee_company}</p>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                <Mail className="h-3 w-3" /> {ref.referee_email}
-                              </p>
-                            </div>
-                            <Badge className={ref.status === 'verified' ? 'bg-emerald-500' : ref.status === 'declined' ? 'bg-destructive' : ''}>
-                              {ref.status}
-                            </Badge>
+                        {ref.status === 'pending' && (
+                          <div className="flex gap-2 pt-2 border-t">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleReferenceAction(ref.id, 'declined')}
+                              disabled={processingItem === ref.id}
+                            >
+                              {processingItem === ref.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Decline
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleReferenceAction(ref.id, 'verified')}
+                              disabled={processingItem === ref.id}
+                            >
+                              {processingItem === ref.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Verify
+                                </>
+                              )}
+                            </Button>
                           </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* ID & Insurance Documents with Verification Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>ID & Insurance Documents</CardTitle>
+                <CardDescription>Review and verify uploaded documents</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {idVerifications.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No documents uploaded</p>
+                ) : (
+                  <div className="space-y-4">
+                    {idVerifications.map(doc => (
+                      <div key={doc.id} className="p-4 border rounded-lg space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium">
+                              {doc.is_insurance ? 'Insurance Document' : 'ID Document'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">Type: {doc.document_type}</p>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="p-0 h-auto text-primary"
+                              onClick={() => window.open(doc.document_url, '_blank')}
+                            >
+                              <ExternalLink className="mr-1 h-3 w-3" /> View Document
+                            </Button>
+                          </div>
+                          <Badge className={
+                            doc.status === 'verified' ? 'bg-emerald-500' : 
+                            doc.status === 'rejected' ? 'bg-destructive' : ''
+                          }>
+                            {doc.status || 'pending'}
+                          </Badge>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+
+                        {doc.rejection_reason && (
+                          <p className="text-sm text-destructive">
+                            Rejection reason: {doc.rejection_reason}
+                          </p>
+                        )}
+
+                        {doc.status === 'pending' && (
+                          <div className="space-y-3 pt-2 border-t">
+                            <Textarea
+                              placeholder="Rejection reason (if rejecting)..."
+                              value={processingItem === doc.id ? rejectionReason : ''}
+                              onChange={(e) => setRejectionReason(e.target.value)}
+                              rows={2}
+                              className="text-sm"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleIdVerificationAction(doc.id, 'rejected')}
+                                disabled={processingItem === doc.id}
+                              >
+                                {processingItem === doc.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleIdVerificationAction(doc.id, 'verified')}
+                                disabled={processingItem === doc.id}
+                              >
+                                {processingItem === doc.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Verify
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Actions Tab */}
