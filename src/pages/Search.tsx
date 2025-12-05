@@ -74,6 +74,7 @@ const Search = () => {
           *,
           verification_statuses (testing_status, references_status, interview_status)
         `)
+        .eq("approval_status", "active")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
