@@ -94,11 +94,14 @@ const WorkerApproval = () => {
 
     setProcessing(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error } = await supabase
         .from("worker_profiles")
         .update({
           approval_status: status,
           approved_at: new Date().toISOString(),
+          approved_by: user?.id || null,
           approval_notes: approvalNotes || null,
         })
         .eq("id", selectedWorker.id);
