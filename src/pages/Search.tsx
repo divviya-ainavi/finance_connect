@@ -272,6 +272,65 @@ const Search = () => {
     return count;
   };
 
+  const getMatchingCriteria = (candidate: WorkerProfile) => {
+    const matches: { label: string; type: 'role' | 'location' | 'rate' | 'availability' | 'skills' | 'verified' }[] = [];
+
+    // Role match
+    if (roleFilter && roleFilter !== "all" && candidate.roles?.includes(roleFilter)) {
+      matches.push({ label: roleFilter.replace(/_/g, " "), type: 'role' });
+    }
+
+    // Location match
+    if (locationFilter && candidate.location?.toLowerCase().includes(locationFilter.toLowerCase())) {
+      matches.push({ label: locationFilter, type: 'location' });
+    }
+
+    // Rate match
+    if (minRate || maxRate) {
+      const workerMin = candidate.hourly_rate_min || 0;
+      const workerMax = candidate.hourly_rate_max || 999;
+      const searchMin = minRate ? parseFloat(minRate) : 0;
+      const searchMax = maxRate ? parseFloat(maxRate) : 999;
+      if (workerMin <= searchMax && workerMax >= searchMin) {
+        matches.push({ label: "Rate in budget", type: 'rate' });
+      }
+    }
+
+    // Availability match
+    if (availabilityFilter && availabilityFilter !== "any") {
+      const now = new Date();
+      const availableDate = candidate.available_from ? new Date(candidate.available_from) : now;
+      let isMatch = false;
+      
+      if (availabilityFilter === "now" && availableDate <= now) isMatch = true;
+      if (availabilityFilter === "1week" && availableDate <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)) isMatch = true;
+      if (availabilityFilter === "2weeks" && availableDate <= new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)) isMatch = true;
+      if (availabilityFilter === "1month" && availableDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) isMatch = true;
+      
+      if (isMatch) {
+        matches.push({ label: availabilityFilter === "now" ? "Available now" : `Within ${availabilityFilter.replace("1", "1 ").replace("2", "2 ")}`, type: 'availability' });
+      }
+    }
+
+    // Skills/Systems match
+    if (searchTerm) {
+      const matchedSystems = candidate.systems?.filter(s => s.toLowerCase().includes(searchTerm.toLowerCase())) || [];
+      const matchedIndustries = candidate.industries?.filter(i => i.toLowerCase().includes(searchTerm.toLowerCase())) || [];
+      if (matchedSystems.length > 0) {
+        matches.push({ label: matchedSystems[0], type: 'skills' });
+      } else if (matchedIndustries.length > 0) {
+        matches.push({ label: matchedIndustries[0], type: 'skills' });
+      }
+    }
+
+    // Verified
+    if (getVerificationCount(candidate) >= 2) {
+      matches.push({ label: "Verified", type: 'verified' });
+    }
+
+    return matches;
+  };
+
   const handleCandidateClick = (candidateId: string) => {
     if (!user) {
       toast({
@@ -560,6 +619,27 @@ const Search = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {/* Match Indicators */}
+                  {getMatchingCriteria(candidate).length > 0 && (
+                    <div className="bg-primary/5 rounded-md p-2 -mx-2">
+                      <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3 text-primary" />
+                        Matches your search:
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {getMatchingCriteria(candidate).map((match, idx) => (
+                          <Badge 
+                            key={idx} 
+                            variant="default" 
+                            className="text-xs capitalize bg-primary/80"
+                          >
+                            {match.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {candidate.roles && candidate.roles.length > 0 && (
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Roles</p>
