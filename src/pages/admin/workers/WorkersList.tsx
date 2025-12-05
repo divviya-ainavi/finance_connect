@@ -242,14 +242,14 @@ export default function WorkersList() {
             onClick={() => navigate(`/admin/workers/${worker.id}`)}
           >
             <Eye className="h-4 w-4 mr-1" />
-            View
+            Details
           </Button>
           {worker.approval_status === "pending" && !worker.is_suspended && (
             <Button
               size="sm"
               onClick={() => setSelectedWorker(worker)}
             >
-              Review
+              Approve
             </Button>
           )}
         </div>

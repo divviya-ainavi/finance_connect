@@ -864,31 +864,35 @@ export const WorkerReviewDialog = ({
 
         <DialogFooter className="flex gap-2 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            Close
           </Button>
-          <Button
-            variant="destructive"
-            onClick={() => handleApproval("declined")}
-            disabled={processing}
-          >
-            {processing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <XCircle className="mr-2 h-4 w-4" />
-            )}
-            Decline
-          </Button>
-          <Button
-            onClick={() => handleApproval("active")}
-            disabled={processing}
-          >
-            {processing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle className="mr-2 h-4 w-4" />
-            )}
-            Approve
-          </Button>
+          {worker.approval_status === "pending" && (
+            <>
+              <Button
+                variant="destructive"
+                onClick={() => handleApproval("declined")}
+                disabled={processing}
+              >
+                {processing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <XCircle className="mr-2 h-4 w-4" />
+                )}
+                Decline
+              </Button>
+              <Button
+                onClick={() => handleApproval("active")}
+                disabled={processing}
+              >
+                {processing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                )}
+                Approve
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
