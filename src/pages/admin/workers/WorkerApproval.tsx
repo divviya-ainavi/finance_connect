@@ -4,13 +4,11 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, CheckCircle, XCircle, Eye, User, Clock, UserCheck, UserX } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Loader2, Eye, Clock, UserCheck, UserX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { WorkerReviewDialog } from "@/components/admin/WorkerReviewDialog";
 
 interface WorkerForApproval {
   id: string;
@@ -25,13 +23,10 @@ interface WorkerForApproval {
 }
 
 const WorkerApproval = () => {
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [workers, setWorkers] = useState<WorkerForApproval[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<WorkerForApproval | null>(null);
-  const [approvalNotes, setApprovalNotes] = useState("");
-  const [processing, setProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
 
   useEffect(() => {
@@ -92,49 +87,10 @@ const WorkerApproval = () => {
     }
   };
 
-  const handleApproval = async (status: "active" | "declined") => {
-    if (!selectedWorker) return;
-
-    setProcessing(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { error } = await supabase
-        .from("worker_profiles")
-        .update({
-          approval_status: status,
-          approved_at: new Date().toISOString(),
-          approved_by: user?.id || null,
-          approval_notes: approvalNotes || null,
-        })
-        .eq("id", selectedWorker.id);
-
-      if (error) throw error;
-
-      toast({
-        title: status === "active" ? "Worker approved" : "Worker declined",
-        description: `${selectedWorker.name} has been ${status === "active" ? "approved and is now live" : "declined"}.`,
-      });
-
-      // Close dialog and clear state first
-      setSelectedWorker(null);
-      setApprovalNotes("");
-      
-      // Refresh the list with loading state
-      setLoading(true);
-      await fetchAllWorkers();
-      
-      // Switch to appropriate tab after approval
-      setActiveTab(status === "active" ? "approved" : "declined");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setProcessing(false);
-    }
+  const handleApprovalComplete = async () => {
+    setSelectedWorker(null);
+    setLoading(true);
+    await fetchAllWorkers();
   };
 
   const getRoleLabels = (roles: string[]) => {
@@ -314,72 +270,12 @@ const WorkerApproval = () => {
           </CardContent>
         </Card>
 
-        {/* Approval Dialog */}
-        <Dialog open={!!selectedWorker} onOpenChange={() => setSelectedWorker(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Review: {selectedWorker?.name}
-              </DialogTitle>
-              <DialogDescription>
-                Verification Score: {selectedWorker?.verification_score}%
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Roles:</span>
-                  <p className="text-muted-foreground">
-                    {selectedWorker && getRoleLabels(selectedWorker.roles || [])}
-                  </p>
-                </div>
-                <div>
-                  <span className="font-medium">Location:</span>
-                  <p className="text-muted-foreground">
-                    {selectedWorker?.location || "Not specified"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Notes (optional)</label>
-                <Textarea
-                  value={approvalNotes}
-                  onChange={(e) => setApprovalNotes(e.target.value)}
-                  placeholder="Add notes about this decision..."
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="flex gap-2">
-              <Button
-                variant="destructive"
-                onClick={() => handleApproval("declined")}
-                disabled={processing}
-              >
-                {processing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <XCircle className="mr-2 h-4 w-4" />
-                )}
-                Decline
-              </Button>
-              <Button
-                onClick={() => handleApproval("active")}
-                disabled={processing}
-              >
-                {processing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                )}
-                Approve & Go Live
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Comprehensive Review Dialog */}
+        <WorkerReviewDialog
+          worker={selectedWorker}
+          onClose={() => setSelectedWorker(null)}
+          onApprovalComplete={handleApprovalComplete}
+        />
       </div>
     </AdminLayout>
   );
