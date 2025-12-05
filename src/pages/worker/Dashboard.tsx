@@ -29,6 +29,7 @@ interface ConnectionRequest {
   message: string;
   hours_per_week: number;
   status: string;
+  payment_status: string;
   created_at: string;
   business_profile_id: string;
   business_profiles: {
@@ -510,28 +511,48 @@ const WorkerDashboard = () => {
                             {request.hours_per_week} hours/week
                           </p>
                         </div>
-                        <Badge>Connected</Badge>
+                        <div className="flex items-center gap-2">
+                          {request.payment_status === "paid" ? (
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              Paid - Ready to Chat
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">
+                              Awaiting Payment
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       {request.message && (
                         <p className="text-sm mb-2 p-3 bg-muted rounded-lg">
                           {request.message}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mb-3">
                         Connected on {new Date(request.created_at).toLocaleDateString()}
                       </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-3"
-                        onClick={() => {
-                          setSelectedConnection(request.id);
-                          setReviewFormOpen(true);
-                        }}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Leave Review
-                      </Button>
+                      <div className="flex gap-2">
+                        {request.payment_status === "paid" && (
+                          <Button
+                            size="sm"
+                            onClick={() => navigate("/messages")}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Chat with Business
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedConnection(request.id);
+                            setReviewFormOpen(true);
+                          }}
+                        >
+                          <Star className="h-4 w-4 mr-2" />
+                          Leave Review
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

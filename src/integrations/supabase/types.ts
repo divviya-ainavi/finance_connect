@@ -116,6 +116,8 @@ export type Database = {
           hours_per_week: number | null
           id: string
           message: string | null
+          payment_completed_at: string | null
+          payment_status: string | null
           rate_offered: number | null
           remote_onsite: string | null
           status: Database["public"]["Enums"]["connection_status"] | null
@@ -128,6 +130,8 @@ export type Database = {
           hours_per_week?: number | null
           id?: string
           message?: string | null
+          payment_completed_at?: string | null
+          payment_status?: string | null
           rate_offered?: number | null
           remote_onsite?: string | null
           status?: Database["public"]["Enums"]["connection_status"] | null
@@ -140,6 +144,8 @@ export type Database = {
           hours_per_week?: number | null
           id?: string
           message?: string | null
+          payment_completed_at?: string | null
+          payment_status?: string | null
           rate_offered?: number | null
           remote_onsite?: string | null
           status?: Database["public"]["Enums"]["connection_status"] | null

@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Loader2, Search, Users, Clock, LogOut, Star, MessageSquare, Settings, Building2 } from "lucide-react";
+import { Briefcase, Loader2, Search, Users, Clock, LogOut, Star, MessageSquare, Settings, Building2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
+import PaymentDialog from "@/components/payment/PaymentDialog";
 
 interface BusinessProfile {
   id: string;
@@ -17,6 +18,7 @@ interface BusinessProfile {
 interface ConnectionRequest {
   id: string;
   status: string;
+  payment_status: string;
   hours_per_week: number;
   created_at: string;
   worker_profile_id: string;
@@ -40,6 +42,8 @@ const BusinessDashboard = () => {
   const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
   const [averageRating, setAverageRating] = useState<number>(0);
   const [reviewCount, setReviewCount] = useState<number>(0);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<ConnectionRequest | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -185,6 +189,37 @@ const BusinessDashboard = () => {
 
       setReviewFormOpen(false);
       setSelectedConnection(null);
+      fetchDashboardData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePaymentComplete = async () => {
+    if (!selectedPaymentRequest) return;
+
+    try {
+      const { error } = await supabase
+        .from("connection_requests")
+        .update({ 
+          payment_status: "paid",
+          payment_completed_at: new Date().toISOString()
+        })
+        .eq("id", selectedPaymentRequest.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Payment successful!",
+        description: "You can now message the candidate.",
+      });
+
+      setPaymentDialogOpen(false);
+      setSelectedPaymentRequest(null);
       fetchDashboardData();
     } catch (error: any) {
       toast({
@@ -374,18 +409,43 @@ const BusinessDashboard = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(request.status)}
-                      {request.status === "accepted" && (
+                      {request.status === "accepted" && request.payment_status !== "paid" && (
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={() => {
-                            setSelectedConnection(request.id);
-                            setReviewFormOpen(true);
+                            setSelectedPaymentRequest(request);
+                            setPaymentDialogOpen(true);
                           }}
                         >
-                          <MessageSquare className="h-4 w-4 mr-1" />
-                          Review
+                          <CreditCard className="h-4 w-4 mr-1" />
+                          Pay to Connect
                         </Button>
+                      )}
+                      {request.status === "accepted" && request.payment_status === "paid" && (
+                        <>
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            Paid
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => navigate("/messages")}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Chat
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedConnection(request.id);
+                              setReviewFormOpen(true);
+                            }}
+                          >
+                            <Star className="h-4 w-4 mr-1" />
+                            Review
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -409,6 +469,17 @@ const BusinessDashboard = () => {
               />
             </div>
           </div>
+        )}
+
+        {/* Payment Dialog */}
+        {selectedPaymentRequest && (
+          <PaymentDialog
+            open={paymentDialogOpen}
+            onOpenChange={setPaymentDialogOpen}
+            workerName={getDisplayName(selectedPaymentRequest.worker_profiles)}
+            hoursPerWeek={selectedPaymentRequest.hours_per_week}
+            onPaymentComplete={handlePaymentComplete}
+          />
         )}
       </div>
     </div>
