@@ -79,6 +79,7 @@ const Messages = () => {
           `)
           .eq("worker_profile_id", workerProfile.id)
           .eq("status", "accepted")
+          .eq("payment_status", "paid")
           .order("updated_at", { ascending: false });
 
         query = data;
@@ -102,6 +103,7 @@ const Messages = () => {
           `)
           .eq("business_profile_id", businessProfile.id)
           .eq("status", "accepted")
+          .eq("payment_status", "paid")
           .order("updated_at", { ascending: false });
 
         query = data;
