@@ -126,13 +126,13 @@ const WorkerApproval = () => {
   const renderWorkerTable = (workerList: WorkerForApproval[], showActions: boolean = true) => (
     workerList.length === 0 ? (
       <p className="text-center text-muted-foreground py-8">
-        No workers in this category.
+        No finance professionals in this category.
       </p>
     ) : (
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Worker</TableHead>
+            <TableHead>Professional</TableHead>
             <TableHead>Roles</TableHead>
             <TableHead>Location</TableHead>
             <TableHead>Verification</TableHead>
@@ -191,9 +191,9 @@ const WorkerApproval = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Worker Approval</h1>
+          <h1 className="text-3xl font-bold">Professional Approval</h1>
           <p className="text-muted-foreground">
-            Review and manage worker approvals before they go live on the platform.
+            Review and manage finance professional approvals before they go live on the platform.
           </p>
         </div>
 
@@ -230,9 +230,9 @@ const WorkerApproval = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Worker Management</CardTitle>
+            <CardTitle>Professional Management</CardTitle>
             <CardDescription>
-              View all workers and their approval status
+              View all finance professionals and their approval status
             </CardDescription>
           </CardHeader>
           <CardContent>

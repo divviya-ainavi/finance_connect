@@ -53,7 +53,7 @@ const Landing = () => {
                 onClick={() => navigate("/auth?type=worker")}
               >
                 <Users className="mr-2 h-5 w-5" />
-                I'm a Worker
+                I'm a Finance Professional
               </Button>
               <Button 
                 variant="hero" 
@@ -72,7 +72,7 @@ const Landing = () => {
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <Badge className="mb-4" variant="outline">For Workers</Badge>
+            <Badge className="mb-4" variant="outline">For Finance Professionals</Badge>
             <h2 className="text-3xl font-bold mb-4">Your Skills, Your Schedule</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Create your profile, showcase your expertise, and connect with businesses looking for your skills.
@@ -171,7 +171,7 @@ const Landing = () => {
             <Shield className="h-16 w-16 text-primary mx-auto mb-6" />
             <h2 className="text-3xl font-bold mb-4">Trust Through Verification</h2>
             <p className="text-muted-foreground mb-8">
-              All workers can complete our three-step verification process to demonstrate their expertise:
+              All finance professionals can complete our three-step verification process to demonstrate their expertise:
             </p>
             <div className="grid md:grid-cols-3 gap-6 text-left">
               <div>

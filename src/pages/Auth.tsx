@@ -438,7 +438,7 @@ const Auth = () => {
                     <RadioGroup value={selectedUserType} onValueChange={(v) => setSelectedUserType(v as "worker" | "business")}>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="worker" id="worker" />
-                        <Label htmlFor="worker" className="cursor-pointer">Finance Professional (Worker)</Label>
+                        <Label htmlFor="worker" className="cursor-pointer">Finance Professional</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="business" id="business" />
