@@ -352,22 +352,53 @@ const CandidateDetail = () => {
     return worker?.id_verifications?.some(v => v.is_insurance && v.status === "approved");
   };
 
-  // Calculate match scores for display
-  const getMatchScores = () => {
-    // These would ideally come from business profile preferences
-    // For now, showing static high matches based on worker's profile completeness
-    const scores = {
-      skills: worker?.systems && worker.systems.length > 0 ? 85 + Math.min(13, worker.systems.length * 3) : 70,
-      rate: worker?.hourly_rate_min ? 100 : 80,
-      availability: worker?.availability && Object.keys(worker.availability).length > 0 ? 90 : 75,
-      location: worker?.location ? 100 : 60,
-      industry: worker?.industries && worker.industries.length > 0 ? 75 + Math.min(20, worker.industries.length * 5) : 65,
+  // Calculate profile completeness percentages based on actual data
+  const getProfileCompleteness = () => {
+    const completeness = {
+      skills: 0,
+      rate: 0,
+      availability: 0,
+      location: 0,
+      industry: 0,
     };
-    const overall = Math.round((scores.skills + scores.rate + scores.availability + scores.location + scores.industry) / 5);
-    return { ...scores, overall };
+
+    // Skills - based on systems and verification
+    if (worker?.systems && worker.systems.length > 0) {
+      completeness.skills = Math.min(100, worker.systems.length * 20);
+    }
+    if (isSkillsVerified()) {
+      completeness.skills = 100;
+    }
+
+    // Rate - check if rate is specified
+    if (worker?.hourly_rate_min && worker?.hourly_rate_max) {
+      completeness.rate = 100;
+    } else if (worker?.hourly_rate_min || worker?.hourly_rate_max) {
+      completeness.rate = 50;
+    }
+
+    // Availability - based on availability data
+    if (worker?.availability) {
+      const filledDays = Object.values(worker.availability).filter((v: any) => v && v.length > 0).length;
+      completeness.availability = Math.min(100, filledDays * 20);
+    }
+
+    // Location - check if location is specified
+    completeness.location = worker?.location ? 100 : 0;
+
+    // Industry - based on industries listed
+    if (worker?.industries && worker.industries.length > 0) {
+      completeness.industry = Math.min(100, worker.industries.length * 25);
+    }
+
+    const overall = Math.round(
+      (completeness.skills + completeness.rate + completeness.availability + completeness.location + completeness.industry) / 5
+    );
+
+    return { ...completeness, overall };
   };
 
-  const matchScores = getMatchScores();
+  const profileCompleteness = getProfileCompleteness();
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -461,47 +492,47 @@ const CandidateDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Match Breakdown */}
+            {/* Profile Completeness */}
             <Card className="shadow-medium">
               <CardHeader className="pb-3">
-                <p className="text-sm font-medium text-muted-foreground">Match Breakdown</p>
+                <p className="text-sm font-medium text-muted-foreground">Profile Completeness</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center pb-2 border-b">
-                  <p className="text-3xl font-bold text-primary">{matchScores.overall}%</p>
-                  <p className="text-sm text-muted-foreground">Overall Match</p>
+                  <p className="text-3xl font-bold text-primary">{profileCompleteness.overall}%</p>
+                  <p className="text-sm text-muted-foreground">Overall Completeness</p>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Skills Match</span>
-                    <span className="text-sm font-semibold text-primary">{matchScores.skills}%</span>
+                    <span className="text-sm">Skills & Systems</span>
+                    <span className="text-sm font-semibold text-primary">{profileCompleteness.skills}%</span>
                   </div>
-                  <Progress value={matchScores.skills} className="h-2" />
+                  <Progress value={profileCompleteness.skills} className="h-2" />
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Rate Match</span>
-                    <span className="text-sm font-semibold text-primary">{matchScores.rate}%</span>
+                    <span className="text-sm">Rate Information</span>
+                    <span className="text-sm font-semibold text-primary">{profileCompleteness.rate}%</span>
                   </div>
-                  <Progress value={matchScores.rate} className="h-2" />
+                  <Progress value={profileCompleteness.rate} className="h-2" />
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Availability Match</span>
-                    <span className="text-sm font-semibold text-primary">{matchScores.availability}%</span>
+                    <span className="text-sm">Availability</span>
+                    <span className="text-sm font-semibold text-primary">{profileCompleteness.availability}%</span>
                   </div>
-                  <Progress value={matchScores.availability} className="h-2" />
+                  <Progress value={profileCompleteness.availability} className="h-2" />
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Location Match</span>
-                    <span className="text-sm font-semibold text-primary">{matchScores.location}%</span>
+                    <span className="text-sm">Location</span>
+                    <span className="text-sm font-semibold text-primary">{profileCompleteness.location}%</span>
                   </div>
-                  <Progress value={matchScores.location} className="h-2" />
+                  <Progress value={profileCompleteness.location} className="h-2" />
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Industry Match</span>
-                    <span className="text-sm font-semibold text-primary">{matchScores.industry}%</span>
+                    <span className="text-sm">Industry Experience</span>
+                    <span className="text-sm font-semibold text-primary">{profileCompleteness.industry}%</span>
                   </div>
-                  <Progress value={matchScores.industry} className="h-2" />
+                  <Progress value={profileCompleteness.industry} className="h-2" />
                 </div>
 
                 {/* Action Buttons */}
