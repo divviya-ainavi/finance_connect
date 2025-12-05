@@ -699,13 +699,17 @@ const CandidateDetail = () => {
                 <CardTitle>Systems</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {worker.systems?.map((system) => (
-                    <Badge key={system} variant="secondary">
-                      {system}
-                    </Badge>
-                  ))}
-                </div>
+                {worker.systems && worker.systems.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {worker.systems.map((system) => (
+                      <Badge key={system} variant="secondary">
+                        {system}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No systems specified</p>
+                )}
               </CardContent>
             </Card>
 
@@ -714,13 +718,17 @@ const CandidateDetail = () => {
                 <CardTitle>Industries</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {worker.industries?.map((industry) => (
-                    <Badge key={industry} variant="secondary">
-                      {industry}
-                    </Badge>
-                  ))}
-                </div>
+                {worker.industries && worker.industries.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {worker.industries.map((industry) => (
+                      <Badge key={industry} variant="secondary">
+                        {industry}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No industries specified</p>
+                )}
               </CardContent>
             </Card>
           </div>
