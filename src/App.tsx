@@ -28,7 +28,6 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/Dashboard";
 import WorkersList from "./pages/admin/workers/WorkersList";
 import WorkerDetail from "./pages/admin/workers/WorkerDetail";
-import WorkerApproval from "./pages/admin/workers/WorkerApproval";
 import BusinessesList from "./pages/admin/businesses/BusinessesList";
 import BusinessDetailAdmin from "./pages/admin/businesses/BusinessDetail";
 import TestsManagement from "./pages/admin/verification/TestsManagement";
@@ -72,7 +71,6 @@ const App = () => (
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/workers" element={<WorkersList />} />
-            <Route path="/admin/workers/approval" element={<WorkerApproval />} />
             <Route path="/admin/workers/:id" element={<WorkerDetail />} />
             <Route path="/admin/businesses" element={<BusinessesList />} />
             <Route path="/admin/businesses/:id" element={<BusinessDetailAdmin />} />
