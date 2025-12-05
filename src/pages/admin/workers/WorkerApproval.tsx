@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, CheckCircle, XCircle, Eye, User } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, CheckCircle, XCircle, Eye, User, Clock, UserCheck, UserX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +19,8 @@ interface WorkerForApproval {
   roles: string[];
   approval_status: string;
   created_at: string;
+  approved_at: string | null;
+  approval_notes: string | null;
   verification_score: number;
 }
 
@@ -29,17 +32,17 @@ const WorkerApproval = () => {
   const [selectedWorker, setSelectedWorker] = useState<WorkerForApproval | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState("pending");
 
   useEffect(() => {
-    fetchPendingWorkers();
+    fetchAllWorkers();
   }, []);
 
-  const fetchPendingWorkers = async () => {
+  const fetchAllWorkers = async () => {
     try {
       const { data, error } = await supabase
         .from("worker_profiles")
         .select("*")
-        .eq("approval_status", "pending")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -115,7 +118,7 @@ const WorkerApproval = () => {
 
       setSelectedWorker(null);
       setApprovalNotes("");
-      fetchPendingWorkers();
+      fetchAllWorkers();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -142,21 +145,131 @@ const WorkerApproval = () => {
     return roles.map((r) => labels[r] || r).join(", ");
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-500">Approved</Badge>;
+      case "declined":
+        return <Badge variant="destructive">Declined</Badge>;
+      default:
+        return <Badge variant="secondary">Pending</Badge>;
+    }
+  };
+
+  const pendingWorkers = workers.filter(w => w.approval_status === "pending");
+  const approvedWorkers = workers.filter(w => w.approval_status === "active");
+  const declinedWorkers = workers.filter(w => w.approval_status === "declined");
+
+  const renderWorkerTable = (workerList: WorkerForApproval[], showActions: boolean = true) => (
+    workerList.length === 0 ? (
+      <p className="text-center text-muted-foreground py-8">
+        No workers in this category.
+      </p>
+    ) : (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Worker</TableHead>
+            <TableHead>Roles</TableHead>
+            <TableHead>Location</TableHead>
+            <TableHead>Verification</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {workerList.map((worker) => (
+            <TableRow key={worker.id}>
+              <TableCell className="font-medium">{worker.name}</TableCell>
+              <TableCell className="text-sm">
+                {getRoleLabels(worker.roles || [])}
+              </TableCell>
+              <TableCell>{worker.location || "—"}</TableCell>
+              <TableCell>
+                <Badge variant={worker.verification_score >= 75 ? "default" : "secondary"}>
+                  {worker.verification_score}%
+                </Badge>
+              </TableCell>
+              <TableCell>{getStatusBadge(worker.approval_status)}</TableCell>
+              <TableCell>
+                {worker.approved_at 
+                  ? new Date(worker.approved_at).toLocaleDateString()
+                  : new Date(worker.created_at).toLocaleDateString()
+                }
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/admin/workers/${worker.id}`)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {showActions && worker.approval_status === "pending" && (
+                    <Button
+                      size="sm"
+                      onClick={() => setSelectedWorker(worker)}
+                    >
+                      Review
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    )
+  );
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Worker Approval Queue</h1>
+          <h1 className="text-3xl font-bold">Worker Approval</h1>
           <p className="text-muted-foreground">
-            Review and approve workers before they go live on the platform.
+            Review and manage worker approvals before they go live on the platform.
           </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{pendingWorkers.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Approved</CardTitle>
+              <UserCheck className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{approvedWorkers.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Declined</CardTitle>
+              <UserX className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{declinedWorkers.length}</div>
+            </CardContent>
+          </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Pending Workers</CardTitle>
+            <CardTitle>Worker Management</CardTitle>
             <CardDescription>
-              {workers.length} worker{workers.length !== 1 ? "s" : ""} awaiting review
+              View all workers and their approval status
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -164,59 +277,32 @@ const WorkerApproval = () => {
               <div className="flex justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
-            ) : workers.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No workers pending approval.
-              </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Worker</TableHead>
-                    <TableHead>Roles</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Verification</TableHead>
-                    <TableHead>Applied</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {workers.map((worker) => (
-                    <TableRow key={worker.id}>
-                      <TableCell className="font-medium">{worker.name}</TableCell>
-                      <TableCell className="text-sm">
-                        {getRoleLabels(worker.roles || [])}
-                      </TableCell>
-                      <TableCell>{worker.location || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant={worker.verification_score >= 75 ? "default" : "secondary"}>
-                          {worker.verification_score}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(worker.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => navigate(`/admin/workers/${worker.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => setSelectedWorker(worker)}
-                          >
-                            Review
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="mb-4">
+                  <TabsTrigger value="pending" className="gap-2">
+                    <Clock className="h-4 w-4" />
+                    Pending ({pendingWorkers.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="approved" className="gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    Approved ({approvedWorkers.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="declined" className="gap-2">
+                    <UserX className="h-4 w-4" />
+                    Declined ({declinedWorkers.length})
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="pending">
+                  {renderWorkerTable(pendingWorkers, true)}
+                </TabsContent>
+                <TabsContent value="approved">
+                  {renderWorkerTable(approvedWorkers, false)}
+                </TabsContent>
+                <TabsContent value="declined">
+                  {renderWorkerTable(declinedWorkers, false)}
+                </TabsContent>
+              </Tabs>
             )}
           </CardContent>
         </Card>
