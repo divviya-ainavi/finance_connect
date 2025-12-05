@@ -137,7 +137,7 @@ const Messages = () => {
     if (userType === "worker") {
       return connection.business_profiles?.company_name || "Business";
     }
-    return connection.worker_profiles?.name || "Worker";
+    return connection.worker_profiles?.name || "Finance Professional";
   };
 
   const getOtherPartyPhoto = (connection: Connection) => {

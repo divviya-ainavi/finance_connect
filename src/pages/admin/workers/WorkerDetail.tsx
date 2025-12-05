@@ -76,14 +76,14 @@ export default function WorkerDetail() {
     if (error) {
       toast({
         title: 'Error',
-        description: 'Failed to suspend worker',
+        description: 'Failed to suspend professional',
         variant: 'destructive',
       });
     } else {
       setWorker({ ...worker, is_suspended: true, suspension_reason: suspensionReason });
       toast({
-        title: 'Worker suspended',
-        description: 'The worker has been suspended successfully',
+        title: 'Professional suspended',
+        description: 'The finance professional has been suspended successfully',
       });
     }
     setActionLoading(false);
@@ -105,15 +105,15 @@ export default function WorkerDetail() {
     if (error) {
       toast({
         title: 'Error',
-        description: 'Failed to unsuspend worker',
+        description: 'Failed to unsuspend professional',
         variant: 'destructive',
       });
     } else {
       setWorker({ ...worker, is_suspended: false, suspension_reason: null });
       setSuspensionReason('');
       toast({
-        title: 'Worker unsuspended',
-        description: 'The worker has been unsuspended successfully',
+        title: 'Professional unsuspended',
+        description: 'The finance professional has been unsuspended successfully',
       });
     }
     setActionLoading(false);
@@ -137,7 +137,7 @@ export default function WorkerDetail() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Worker not found</p>
+          <p className="text-muted-foreground">Finance Professional not found</p>
         </div>
       </AdminLayout>
     );
@@ -152,7 +152,7 @@ export default function WorkerDetail() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-foreground">{worker.name}</h1>
-            <p className="text-muted-foreground">Worker Profile</p>
+            <p className="text-muted-foreground">Finance Professional Profile</p>
           </div>
           {worker.is_suspended ? (
             <Badge variant="destructive" className="ml-auto">Suspended</Badge>
@@ -214,14 +214,14 @@ export default function WorkerDetail() {
             <CardHeader>
               <CardTitle>Account Actions</CardTitle>
               <CardDescription>
-                Manage worker account status
+                Manage finance professional account status
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {worker.is_suspended ? (
                 <>
                   <div className="p-4 bg-destructive/10 rounded-lg">
-                    <p className="font-medium text-destructive">This worker is suspended</p>
+                    <p className="font-medium text-destructive">This finance professional is suspended</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       Reason: {worker.suspension_reason}
                     </p>
@@ -232,7 +232,7 @@ export default function WorkerDetail() {
                     className="w-full"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Unsuspend Worker
+                    Unsuspend Professional
                   </Button>
                 </>
               ) : (
@@ -253,7 +253,7 @@ export default function WorkerDetail() {
                     className="w-full"
                   >
                     <Ban className="h-4 w-4 mr-2" />
-                    Suspend Worker
+                    Suspend Professional
                   </Button>
                 </>
               )}

@@ -23,8 +23,8 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 const navItems = [
   { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { title: 'Workers', href: '/admin/workers', icon: Users },
-  { title: 'Worker Approval', href: '/admin/workers/approval', icon: UserCheck },
+  { title: 'Finance Professionals', href: '/admin/workers', icon: Users },
+  { title: 'Professional Approval', href: '/admin/workers/approval', icon: UserCheck },
   { title: 'Businesses', href: '/admin/businesses', icon: Building2 },
   { 
     title: 'Verification', 

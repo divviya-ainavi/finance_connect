@@ -55,8 +55,8 @@ export default function WorkersList() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Workers</h1>
-            <p className="text-muted-foreground">Manage worker profiles</p>
+            <h1 className="text-3xl font-bold text-foreground">Finance Professionals</h1>
+            <p className="text-muted-foreground">Manage finance professional profiles</p>
           </div>
         </div>
 
@@ -127,7 +127,7 @@ export default function WorkersList() {
               </TableBody>
             </Table>
             {filteredWorkers.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">No workers found</p>
+              <p className="text-center text-muted-foreground py-8">No finance professionals found</p>
             )}
           </CardContent>
         </Card>

@@ -179,7 +179,7 @@ export const WorkerReviewDialog = ({
       if (error) throw error;
 
       toast({
-        title: status === "active" ? "Worker approved" : "Worker declined",
+        title: status === "active" ? "Professional approved" : "Professional declined",
         description: `${worker.name} has been ${
           status === "active" ? "approved and is now live" : "declined"
         }.`,
@@ -358,7 +358,7 @@ export const WorkerReviewDialog = ({
             Review: {worker.name}
           </DialogTitle>
           <DialogDescription>
-            Complete verification review for this worker
+            Complete verification review for this finance professional
           </DialogDescription>
         </DialogHeader>
 
