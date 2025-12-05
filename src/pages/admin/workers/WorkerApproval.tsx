@@ -116,9 +116,16 @@ const WorkerApproval = () => {
         description: `${selectedWorker.name} has been ${status === "active" ? "approved and is now live" : "declined"}.`,
       });
 
+      // Close dialog and clear state first
       setSelectedWorker(null);
       setApprovalNotes("");
-      fetchAllWorkers();
+      
+      // Refresh the list with loading state
+      setLoading(true);
+      await fetchAllWorkers();
+      
+      // Switch to appropriate tab after approval
+      setActiveTab(status === "active" ? "approved" : "declined");
     } catch (error: any) {
       toast({
         title: "Error",
