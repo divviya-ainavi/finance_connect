@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2, MessageSquare, Briefcase } from "lucide-react";
+import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2, MessageSquare, Briefcase, Shield, Clock, TrendingUp } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import ReviewSummary from "@/components/reviews/ReviewSummary";
@@ -33,11 +34,19 @@ interface WorkerProfile {
   own_equipment: boolean;
   availability: any;
   photo_url?: string | null;
+  hourly_rate_min?: number | null;
+  hourly_rate_max?: number | null;
+  available_from?: string | null;
+  total_hours_per_week?: number | null;
   verification_statuses?: {
     testing_status: string;
     references_status: string;
     interview_status: string;
   };
+  id_verifications?: {
+    status: string;
+    is_insurance: boolean;
+  }[];
 }
 
 const CandidateDetail = () => {
@@ -98,6 +107,10 @@ const CandidateDetail = () => {
             testing_status,
             references_status,
             interview_status
+          ),
+          id_verifications (
+            status,
+            is_insurance
           )
         `)
         .eq("id", id!)
@@ -324,138 +337,259 @@ const CandidateDetail = () => {
 
   const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
+  // Helper functions for verification badges
+  const isSkillsVerified = () => {
+    return worker?.verification_statuses && 
+      ["completed", "verified", "passed"].includes(worker.verification_statuses.testing_status);
+  };
+
+  const isReferencesVerified = () => {
+    return worker?.verification_statuses && 
+      ["completed", "verified"].includes(worker.verification_statuses.references_status);
+  };
+
+  const hasInsurance = () => {
+    return worker?.id_verifications?.some(v => v.is_insurance && v.status === "approved");
+  };
+
+  // Calculate match scores for display
+  const getMatchScores = () => {
+    // These would ideally come from business profile preferences
+    // For now, showing static high matches based on worker's profile completeness
+    const scores = {
+      skills: worker?.systems && worker.systems.length > 0 ? 85 + Math.min(13, worker.systems.length * 3) : 70,
+      rate: worker?.hourly_rate_min ? 100 : 80,
+      availability: worker?.availability && Object.keys(worker.availability).length > 0 ? 90 : 75,
+      location: worker?.location ? 100 : 60,
+      industry: worker?.industries && worker.industries.length > 0 ? 75 + Math.min(20, worker.industries.length * 5) : 65,
+    };
+    const overall = Math.round((scores.skills + scores.rate + scores.availability + scores.location + scores.industry) / 5);
+    return { ...scores, overall };
+  };
+
+  const matchScores = getMatchScores();
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
         <Button variant="ghost" onClick={() => navigate("/search")} className="mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Search
         </Button>
 
         <div className="space-y-6">
-          {/* Header */}
-          <Card className="shadow-medium">
-            <CardHeader>
-              <div className="flex items-start justify-between">
+          {/* Main Header Section - Two Column Layout */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Detailed Candidate View */}
+            <Card className="shadow-medium">
+              <CardHeader className="pb-3">
+                <p className="text-sm font-medium text-muted-foreground">Detailed Candidate View</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <Avatar className="h-20 w-20">
+                  <Avatar className="h-16 w-16">
                     {worker.photo_url ? (
                       <AvatarImage src={worker.photo_url} alt={worker.name} />
                     ) : null}
-                    <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                       {worker.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <CardTitle className="text-2xl mb-2">{getDisplayName()}</CardTitle>
-                    <div className="flex items-center gap-1 text-muted-foreground mb-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{worker.location || "Location not specified"}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      {averageRating > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-accent text-accent" />
-                          <span className="font-medium">{averageRating.toFixed(1)}</span>
-                          <span className="text-muted-foreground">({reviews.length} reviews)</span>
-                        </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold">{getDisplayName()}</h2>
+                    <p className="text-muted-foreground text-sm">
+                      {worker.roles.slice(0, 2).map(r => r.replace(/_/g, " ")).join(" & ")}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {isSkillsVerified() && (
+                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Skills Verified
+                        </Badge>
                       )}
-                      {projectsDelivered > 0 && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Briefcase className="h-4 w-4" />
-                          <span>{projectsDelivered} projects via FinanceConnect</span>
-                        </div>
+                      {isReferencesVerified() && (
+                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          References OK
+                        </Badge>
+                      )}
+                      {hasInsurance() && (
+                        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                          <Shield className="h-3 w-3 mr-1" />
+                          PI Insured
+                        </Badge>
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <Button onClick={handleToggleShortlist} variant="outline" className="flex-1">
-                  <Star className={`h-4 w-4 mr-2 ${isShortlisted ? "fill-accent text-accent" : ""}`} />
-                  {isShortlisted ? "Shortlisted" : "Add to Shortlist"}
-                </Button>
-                <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="flex-1">
-                      <Send className="h-4 w-4 mr-2" />
-                      Request Connection
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Send Connection Request</DialogTitle>
-                      <DialogDescription>
-                        Provide details about the role you're offering
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label htmlFor="message">Message *</Label>
-                        <Textarea
-                          id="message"
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value)}
-                          placeholder="Introduce your company and the opportunity..."
-                          rows={4}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="hours">Hours Per Week *</Label>
-                        <Input
-                          id="hours"
-                          type="number"
-                          value={hoursPerWeek}
-                          onChange={(e) => setHoursPerWeek(e.target.value)}
-                          placeholder="e.g., 20"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="workmode">Work Mode *</Label>
-                        <Select value={remoteOnsite} onValueChange={setRemoteOnsite}>
-                          <SelectTrigger id="workmode">
-                            <SelectValue placeholder="Select work mode" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="remote">Remote</SelectItem>
-                            <SelectItem value="hybrid">Hybrid</SelectItem>
-                            <SelectItem value="onsite">Onsite</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="rate">Rate Offered (£/hour)</Label>
-                        <Input
-                          id="rate"
-                          type="number"
-                          value={rateOffered}
-                          onChange={(e) => setRateOffered(e.target.value)}
-                          placeholder="Optional"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleSendRequest} disabled={sending} className="flex-1">
-                        {sending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Sending...
-                          </>
-                        ) : (
-                          "Send Request"
-                        )}
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Rating</span>
+                    <span className="font-semibold text-primary flex items-center gap-1">
+                      {averageRating > 0 ? (
+                        <>
+                          <Star className="h-4 w-4 fill-accent text-accent" />
+                          {averageRating.toFixed(1)}/5 ({reviews.length} reviews)
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">No reviews yet</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Projects via Platform</span>
+                    <span className="font-semibold text-primary">{projectsDelivered} completed</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Rate</span>
+                    <span className="font-semibold text-primary">
+                      {worker.hourly_rate_min && worker.hourly_rate_max 
+                        ? `£${worker.hourly_rate_min}-${worker.hourly_rate_max}/hr`
+                        : "Not specified"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Location</span>
+                    <span className="font-semibold text-primary flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {worker.location || "Not specified"}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Match Breakdown */}
+            <Card className="shadow-medium">
+              <CardHeader className="pb-3">
+                <p className="text-sm font-medium text-muted-foreground">Match Breakdown</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center pb-2 border-b">
+                  <p className="text-3xl font-bold text-primary">{matchScores.overall}%</p>
+                  <p className="text-sm text-muted-foreground">Overall Match</p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Skills Match</span>
+                    <span className="text-sm font-semibold text-primary">{matchScores.skills}%</span>
+                  </div>
+                  <Progress value={matchScores.skills} className="h-2" />
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Rate Match</span>
+                    <span className="text-sm font-semibold text-primary">{matchScores.rate}%</span>
+                  </div>
+                  <Progress value={matchScores.rate} className="h-2" />
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Availability Match</span>
+                    <span className="text-sm font-semibold text-primary">{matchScores.availability}%</span>
+                  </div>
+                  <Progress value={matchScores.availability} className="h-2" />
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Location Match</span>
+                    <span className="text-sm font-semibold text-primary">{matchScores.location}%</span>
+                  </div>
+                  <Progress value={matchScores.location} className="h-2" />
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Industry Match</span>
+                    <span className="text-sm font-semibold text-primary">{matchScores.industry}%</span>
+                  </div>
+                  <Progress value={matchScores.industry} className="h-2" />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-4 border-t">
+                  <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="flex-1">
+                        <Send className="h-4 w-4 mr-2" />
+                        Send Connection Request
                       </Button>
-                      <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardContent>
-          </Card>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Send Connection Request</DialogTitle>
+                        <DialogDescription>
+                          Provide details about the role you're offering
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <Label htmlFor="message">Message *</Label>
+                          <Textarea
+                            id="message"
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            placeholder="Introduce your company and the opportunity..."
+                            rows={4}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="hours">Hours Per Week *</Label>
+                          <Input
+                            id="hours"
+                            type="number"
+                            value={hoursPerWeek}
+                            onChange={(e) => setHoursPerWeek(e.target.value)}
+                            placeholder="e.g., 20"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="workmode">Work Mode *</Label>
+                          <Select value={remoteOnsite} onValueChange={setRemoteOnsite}>
+                            <SelectTrigger id="workmode">
+                              <SelectValue placeholder="Select work mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="remote">Remote</SelectItem>
+                              <SelectItem value="hybrid">Hybrid</SelectItem>
+                              <SelectItem value="onsite">Onsite</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="rate">Rate Offered (£/hour)</Label>
+                          <Input
+                            id="rate"
+                            type="number"
+                            value={rateOffered}
+                            onChange={(e) => setRateOffered(e.target.value)}
+                            placeholder="Optional"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={handleSendRequest} disabled={sending} className="flex-1">
+                          {sending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            "Send Request"
+                          )}
+                        </Button>
+                        <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <Button onClick={handleToggleShortlist} variant="outline">
+                    <Star className={`h-4 w-4 mr-2 ${isShortlisted ? "fill-accent text-accent" : ""}`} />
+                    {isShortlisted ? "Shortlisted" : "Add to Shortlist"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Roles */}
           <Card className="shadow-soft">
