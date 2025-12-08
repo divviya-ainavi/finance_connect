@@ -309,24 +309,30 @@ const Verification = () => {
                       Complete a test for each role you offer. Pass rate: 80% or higher.
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 bg-accent/10 px-3 py-2 rounded-lg border border-accent/20">
-                      <Zap className="h-4 w-4 text-accent" />
-                      <span className="text-sm font-medium">Demo Mode</span>
-                      <Switch checked={demoMode} onCheckedChange={setDemoMode} />
-                    </div>
-                    {demoMode && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleSkipAllTests}
-                        disabled={skippingTest === "all"}
-                      >
-                        {skippingTest === "all" ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : null}
-                        Skip to Next Step
-                      </Button>
+                  <div 
+                    className="flex items-center gap-2 bg-accent/10 px-3 py-2 rounded-lg border border-accent/20 cursor-pointer"
+                    onClick={() => {
+                      if (!demoMode) {
+                        setDemoMode(true);
+                        handleSkipAllTests();
+                      } else {
+                        setDemoMode(false);
+                      }
+                    }}
+                  >
+                    <Zap className="h-4 w-4 text-accent" />
+                    <span className="text-sm font-medium">Skip Test</span>
+                    <Switch 
+                      checked={demoMode} 
+                      onCheckedChange={(checked) => {
+                        setDemoMode(checked);
+                        if (checked) {
+                          handleSkipAllTests();
+                        }
+                      }} 
+                    />
+                    {skippingTest === "all" && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     )}
                   </div>
                 </div>
