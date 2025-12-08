@@ -15,6 +15,7 @@ import { z } from "zod";
 const emailSchema = z.string().email("Invalid email address").max(255);
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters").max(100);
 const nameSchema = z.string().min(1, "Name is required").max(100);
+const companyNameSchema = z.string().min(1, "Company name is required").max(100);
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -25,6 +26,9 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactRole, setContactRole] = useState("");
   const [selectedUserType, setSelectedUserType] = useState<"worker" | "business">(
     (searchParams.get("type") as "worker" | "business") || "worker"
   );
@@ -48,7 +52,13 @@ const Auth = () => {
       // Validate inputs
       emailSchema.parse(email);
       passwordSchema.parse(password);
-      nameSchema.parse(name);
+      
+      if (selectedUserType === "worker") {
+        nameSchema.parse(name);
+      } else {
+        companyNameSchema.parse(companyName);
+        nameSchema.parse(contactName);
+      }
 
       const redirectUrl = `${window.location.origin}/`;
       
@@ -104,8 +114,9 @@ const Auth = () => {
               .from("business_profiles")
               .insert({
                 profile_id: profileData.id,
-                company_name: name,
-                contact_name: name,
+                company_name: companyName,
+                contact_name: contactName,
+                contact_role: contactRole || null,
               });
 
             if (businessError) throw businessError;
@@ -446,19 +457,55 @@ const Auth = () => {
                       </div>
                     </RadioGroup>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">
-                      {selectedUserType === "worker" ? "Your Name" : "Company Name"}
-                    </Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder={selectedUserType === "worker" ? "John Doe" : "Acme Corp"}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                    />
-                  </div>
+                  
+                  {selectedUserType === "worker" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Your Name</Label>
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="John Doe"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-company">Company Name</Label>
+                        <Input
+                          id="signup-company"
+                          type="text"
+                          placeholder="Acme Corp"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-contact">Your Name</Label>
+                        <Input
+                          id="signup-contact"
+                          type="text"
+                          placeholder="Sarah Mitchell"
+                          value={contactName}
+                          onChange={(e) => setContactName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-role">Your Role (Optional)</Label>
+                        <Input
+                          id="signup-role"
+                          type="text"
+                          placeholder="Finance Director"
+                          value={contactRole}
+                          onChange={(e) => setContactRole(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
                     <Input
