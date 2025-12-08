@@ -82,6 +82,8 @@ const WorkerProfile = () => {
   const [maxCommuteKm, setMaxCommuteKm] = useState("");
   const [travelTimeMinutes, setTravelTimeMinutes] = useState("");
   const [locationConstraints, setLocationConstraints] = useState("");
+  const [locationConstraintsLatitude, setLocationConstraintsLatitude] = useState<number | null>(null);
+  const [locationConstraintsLongitude, setLocationConstraintsLongitude] = useState<number | null>(null);
   const [onsitePreference, setOnsitePreference] = useState<string>("");
   const [maxDaysOnsite, setMaxDaysOnsite] = useState("");
 
@@ -158,6 +160,8 @@ const WorkerProfile = () => {
         setMaxCommuteKm(data.max_commute_km?.toString() || "");
         setTravelTimeMinutes(data.travel_time_minutes?.toString() || "");
         setLocationConstraints(data.location_constraints || "");
+        setLocationConstraintsLatitude(data.location_constraints_latitude || null);
+        setLocationConstraintsLongitude(data.location_constraints_longitude || null);
         setLocationMode(data.travel_time_minutes ? "time" : "distance");
         setOnsitePreference(data.onsite_preference || "");
         setMaxDaysOnsite(data.max_days_onsite?.toString() || "");
@@ -392,6 +396,8 @@ const WorkerProfile = () => {
         max_commute_km: locationMode === "distance" && maxCommuteKm ? parseInt(maxCommuteKm) : null,
         travel_time_minutes: locationMode === "time" && travelTimeMinutes ? parseInt(travelTimeMinutes) : null,
         location_constraints: locationConstraints || null,
+        location_constraints_latitude: locationConstraintsLatitude,
+        location_constraints_longitude: locationConstraintsLongitude,
         onsite_preference: (onsitePreference as any) || null,
         max_days_onsite: maxDaysOnsite ? parseInt(maxDaysOnsite) : null,
         availability,
@@ -898,12 +904,17 @@ const WorkerProfile = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="locationConstraints">Location Constraints (optional)</Label>
-                  <Input
-                    id="locationConstraints"
+                  <Label>Location Constraints (optional)</Label>
+                  <LocationPicker
                     value={locationConstraints}
-                    onChange={(e) => setLocationConstraints(e.target.value)}
-                    placeholder='e.g., "Only South London"'
+                    latitude={locationConstraintsLatitude}
+                    longitude={locationConstraintsLongitude}
+                    onChange={(loc, lat, lng) => {
+                      setLocationConstraints(loc);
+                      setLocationConstraintsLatitude(lat);
+                      setLocationConstraintsLongitude(lng);
+                    }}
+                    placeholder="Search for preferred work area..."
                   />
                 </div>
 
