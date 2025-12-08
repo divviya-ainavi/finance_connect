@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Search, X } from 'lucide-react';
+import { MapPin, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LocationPickerProps {
@@ -149,7 +149,7 @@ export function LocationPicker({
 
       {isLoading && (
         <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-lg p-3 text-center text-sm text-muted-foreground">
-          <Search className="h-4 w-4 animate-spin inline mr-2" />
+          <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
           Searching...
         </div>
       )}
