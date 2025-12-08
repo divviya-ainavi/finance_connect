@@ -14,11 +14,13 @@ import { VerificationScoreBox } from "@/components/worker/VerificationScoreBox";
 import { IdInsuranceUpload } from "@/components/worker/IdInsuranceUpload";
 
 interface TestAttempt {
+  id: string;
   role: string;
   passed: boolean;
   score: number;
   lockout_until: string | null;
   attempted_at: string;
+  questions_answered: unknown;
 }
 
 interface Reference {
@@ -117,12 +119,24 @@ const Verification = () => {
     
     setSkippingTest("all");
     try {
-      // Delete test attempts that were skipped (have demo_skip flag)
+      // Find test attempts that were skipped (have demo_skip flag)
+      const skippedAttempts = testAttempts.filter(
+        attempt => attempt.questions_answered && 
+        typeof attempt.questions_answered === 'object' && 
+        (attempt.questions_answered as any).demo_skip === true
+      );
+
+      if (skippedAttempts.length === 0) {
+        setDemoMode(false);
+        return;
+      }
+
+      // Delete by IDs
+      const idsToDelete = skippedAttempts.map(a => a.id);
       const { error } = await supabase
         .from("test_attempts")
         .delete()
-        .eq("worker_profile_id", workerProfileId)
-        .contains("questions_answered", { demo_skip: true });
+        .in("id", idsToDelete);
       
       if (error) throw error;
 
