@@ -16,8 +16,8 @@ interface Review {
   rating_categories: any;
   helpful_count: number;
   profiles?: {
-    worker_profiles: { name: string }[] | null;
-    business_profiles: { company_name: string }[] | null;
+    worker_profiles?: { name: string }[] | { name: string } | null;
+    business_profiles?: { company_name: string }[] | { company_name: string } | null;
   } | null;
 }
 
@@ -53,17 +53,19 @@ const Reviews = () => {
         setProfileName(businessProfile?.company_name || "");
       }
 
-      // Fetch reviews
+      // Fetch reviews with reviewer information
       const { data, error } = await supabase
         .from("reviews")
         .select(`
           *,
           profiles!reviews_reviewer_profile_id_fkey (
+            id,
             worker_profiles (name),
             business_profiles (company_name)
           )
         `)
         .eq("reviewee_profile_id", profileId!)
+        .eq("is_hidden", false)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

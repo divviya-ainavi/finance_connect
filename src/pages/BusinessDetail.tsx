@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import StarRating from "@/components/reviews/StarRating";
 import ReviewSummary from "@/components/reviews/ReviewSummary";
+import ReviewList from "@/components/reviews/ReviewList";
 
 interface BusinessProfile {
   id: string;
@@ -29,10 +30,18 @@ interface BusinessProfile {
 
 interface Review {
   id: string;
+  reviewer_profile_id: string;
   rating: number;
   title: string | null;
   content: string;
   created_at: string;
+  rating_categories: any;
+  helpful_count: number;
+  profiles?: {
+    id: string;
+    worker_profiles?: { name: string }[] | { name: string } | null;
+    business_profiles?: { company_name: string }[] | { company_name: string } | null;
+  } | null;
 }
 
 const BusinessDetail = () => {
@@ -65,22 +74,22 @@ const BusinessDetail = () => {
       if (businessError) throw businessError;
       setBusiness(businessData);
 
-      // Fetch reviews for this business
+      // Fetch reviews for this business with reviewer info
       const { data: reviewsData } = await supabase
         .from("reviews")
-        .select("*")
+        .select(`
+          *,
+          profiles!reviews_reviewer_profile_id_fkey (
+            id,
+            worker_profiles (name)
+          )
+        `)
         .eq("reviewee_profile_id", businessData.profile_id)
+        .eq("is_hidden", false)
         .order("created_at", { ascending: false });
 
       if (reviewsData) {
-        const mappedReviews: Review[] = reviewsData.map(r => ({
-          id: r.id,
-          rating: r.rating,
-          title: r.title,
-          content: r.content,
-          created_at: r.created_at || "",
-        }));
-        setReviews(mappedReviews);
+        setReviews(reviewsData as unknown as Review[]);
         
         // Calculate average rating
         if (reviewsData.length > 0) {
@@ -307,21 +316,7 @@ const BusinessDetail = () => {
               </p>
             ) : (
               <div className="space-y-4">
-                {reviews.slice(0, 5).map((review) => (
-                  <div key={review.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <StarRating rating={review.rating} size={16} />
-                      <span className="font-medium">{review.rating}/5</span>
-                      <span className="text-sm text-muted-foreground">
-                        • {new Date(review.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {review.title && (
-                      <h4 className="font-semibold mb-1">{review.title}</h4>
-                    )}
-                    <p className="text-muted-foreground">{review.content}</p>
-                  </div>
-                ))}
+                <ReviewList reviews={reviews} reviewerType="worker" />
                 
                 {reviews.length > 5 && (
                   <Button 
