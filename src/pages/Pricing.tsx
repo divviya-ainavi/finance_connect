@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Loader2, Briefcase, ArrowLeft } from "lucide-react";
+import { Check, Loader2, ArrowLeft } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { useToast } from "@/hooks/use-toast";
 
 interface SubscriptionPlan {
@@ -152,8 +153,7 @@ const Pricing = () => {
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Briefcase className="h-6 w-6 text-primary" />
-            <span className="text-xl font-semibold">FinanceConnect</span>
+            <img src={logo} alt="Axcelera" className="h-8" />
           </div>
           <Button
             variant="outline"
