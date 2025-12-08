@@ -13,8 +13,8 @@ interface Review {
   rating_categories: any;
   helpful_count: number;
   profiles?: {
-    worker_profiles?: { name: string }[] | null;
-    business_profiles?: { company_name: string }[] | null;
+    worker_profiles?: { name: string }[] | { name: string } | null;
+    business_profiles?: { company_name: string }[] | { company_name: string } | null;
   } | null;
 }
 

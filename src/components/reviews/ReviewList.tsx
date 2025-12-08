@@ -13,8 +13,8 @@ interface Review {
   rating_categories: any;
   helpful_count: number;
   profiles?: {
-    worker_profiles?: { name: string }[] | null;
-    business_profiles?: { company_name: string }[] | null;
+    worker_profiles?: { name: string }[] | { name: string } | null;
+    business_profiles?: { company_name: string }[] | { company_name: string } | null;
   } | null;
 }
 
@@ -32,9 +32,25 @@ const ReviewList = ({ reviews, reviewerType, onHelpful }: ReviewListProps) => {
 
   const getReviewerName = (review: Review) => {
     if (reviewerType === "business") {
-      return review.profiles?.business_profiles?.[0]?.company_name || "Anonymous";
+      // Handle both array and object formats from Supabase
+      const businessProfiles = review.profiles?.business_profiles;
+      if (Array.isArray(businessProfiles) && businessProfiles.length > 0) {
+        return businessProfiles[0]?.company_name || "Anonymous";
+      }
+      if (businessProfiles && typeof businessProfiles === 'object' && !Array.isArray(businessProfiles)) {
+        return (businessProfiles as { company_name: string }).company_name || "Anonymous";
+      }
+      return "Anonymous";
     }
-    return review.profiles?.worker_profiles?.[0]?.name || "Anonymous";
+    // Handle both array and object formats from Supabase
+    const workerProfiles = review.profiles?.worker_profiles;
+    if (Array.isArray(workerProfiles) && workerProfiles.length > 0) {
+      return workerProfiles[0]?.name || "Anonymous";
+    }
+    if (workerProfiles && typeof workerProfiles === 'object' && !Array.isArray(workerProfiles)) {
+      return (workerProfiles as { name: string }).name || "Anonymous";
+    }
+    return "Anonymous";
   };
 
   const sortedReviews = [...reviews].sort((a, b) => {

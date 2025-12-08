@@ -176,10 +176,12 @@ const CandidateDetail = () => {
         .select(`
           *,
           profiles!reviews_reviewer_profile_id_fkey (
+            id,
             business_profiles (company_name)
           )
         `)
         .eq("reviewee_profile_id", workerProfile.profile_id)
+        .eq("is_hidden", false)
         .order("created_at", { ascending: false })
         .limit(5);
 
