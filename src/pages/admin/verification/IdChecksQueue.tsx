@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Eye, Clock, IdCard } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, IdCard } from 'lucide-react';
+import { openDocument } from '@/lib/storage-utils';
 
 interface IdVerification {
   id: string;
@@ -162,14 +163,22 @@ export default function IdChecksQueue() {
                 </div>
                 <div>
                   <p className="font-medium text-sm mb-2">Document</p>
-                  <a 
-                    href={selectedVerification.document_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-primary"
+                    onClick={async () => {
+                      const success = await openDocument(selectedVerification.document_url, 'cvs');
+                      if (!success) {
+                        toast({
+                          title: "Error",
+                          description: "Failed to open document",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
                   >
                     View Document
-                  </a>
+                  </Button>
                 </div>
                 {selectedVerification.status === 'pending' && (
                   <>

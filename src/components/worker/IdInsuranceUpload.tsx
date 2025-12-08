@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, FileText, CheckCircle2, XCircle, Clock, Loader2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { openDocument } from "@/lib/storage-utils";
 
 interface IdVerification {
   id: string;
@@ -72,30 +73,8 @@ export const IdInsuranceUpload = ({
   };
 
   const handleViewDocument = async (documentUrl: string) => {
-    try {
-      // Extract the file path from the URL
-      const urlParts = documentUrl.split('/storage/v1/object/public/cvs/');
-      if (urlParts.length < 2) {
-        throw new Error("Invalid document URL");
-      }
-      const filePath = urlParts[1];
-      
-      // Download the file
-      const { data, error } = await supabase.storage.from("cvs").download(filePath);
-      if (error) throw error;
-      
-      // Determine content type based on file extension
-      const ext = filePath.split('.').pop()?.toLowerCase();
-      let contentType = 'application/pdf';
-      if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
-      else if (ext === 'png') contentType = 'image/png';
-      
-      // Create blob URL and open in new tab
-      const blob = new Blob([data], { type: contentType });
-      const blobUrl = window.URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-    } catch (error: any) {
-      console.error("Error viewing document:", error);
+    const success = await openDocument(documentUrl, 'cvs');
+    if (!success) {
       toast({
         title: "Error",
         description: "Failed to open document",
