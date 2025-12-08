@@ -1032,16 +1032,51 @@ const WorkerProfile = () => {
 
             <Card className="shadow-soft">
               <CardHeader>
-                <CardTitle>Equipment & Resources</CardTitle>
+                <CardTitle>Behavioral & Communication Insights</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <Label>Own Equipment</Label>
-                    <p className="text-sm text-muted-foreground">I have my own computer and necessary software</p>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 border rounded-lg space-y-2">
+                    <Label className="text-sm font-medium">Communication Style</Label>
+                    <p className="text-sm text-muted-foreground">Direct & Concise</p>
+                    <Progress value={85} className="h-2" />
                   </div>
-                  <Switch checked={ownEquipment} onCheckedChange={setOwnEquipment} />
+                  <div className="p-4 border rounded-lg space-y-2">
+                    <Label className="text-sm font-medium">Work Style</Label>
+                    <p className="text-sm text-muted-foreground">Detail-Oriented</p>
+                    <Progress value={92} className="h-2" />
+                  </div>
                 </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 border rounded-lg space-y-2">
+                    <Label className="text-sm font-medium">Team Collaboration</Label>
+                    <p className="text-sm text-muted-foreground">Highly Collaborative</p>
+                    <Progress value={78} className="h-2" />
+                  </div>
+                  <div className="p-4 border rounded-lg space-y-2">
+                    <Label className="text-sm font-medium">Problem Solving</Label>
+                    <p className="text-sm text-muted-foreground">Analytical Approach</p>
+                    <Progress value={88} className="h-2" />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 border rounded-lg space-y-2">
+                    <Label className="text-sm font-medium">Adaptability</Label>
+                    <p className="text-sm text-muted-foreground">Flexible & Open</p>
+                    <Progress value={75} className="h-2" />
+                  </div>
+                  <div className="p-4 border rounded-lg space-y-2">
+                    <Label className="text-sm font-medium">Time Management</Label>
+                    <p className="text-sm text-muted-foreground">Highly Organized</p>
+                    <Progress value={90} className="h-2" />
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                  * Assessment data coming soon. These are placeholder insights.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
