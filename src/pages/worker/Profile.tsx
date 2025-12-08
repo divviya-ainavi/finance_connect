@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Loader2, Save, ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -105,8 +104,6 @@ const WorkerProfile = () => {
   const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [cvSignedUrl, setCvSignedUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [cvBlobUrl, setCvBlobUrl] = useState<string | null>(null);
-  const [showCvDialog, setShowCvDialog] = useState(false);
 
   // Photo upload
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -307,24 +304,20 @@ const WorkerProfile = () => {
     if (!cvUrl) return;
     
     try {
-      // Download the file and create a blob URL to display inline
+      // Download the file and create a blob URL to bypass ad blockers
       const { data, error } = await supabase.storage.from("cvs").download(cvUrl);
       if (error) throw error;
       
-      // Revoke previous blob URL if exists
-      if (cvBlobUrl) {
-        window.URL.revokeObjectURL(cvBlobUrl);
-      }
-      
       const blob = new Blob([data], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
-      setCvBlobUrl(blobUrl);
-      setShowCvDialog(true);
+      window.open(blobUrl, '_blank');
+      // Revoke after a delay to allow the new tab to load
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     } catch (error) {
       console.error("Error viewing CV:", error);
       toast({
         title: "Error",
-        description: "Failed to load CV. Please try downloading instead.",
+        description: "Failed to open CV. Please try downloading instead.",
         variant: "destructive",
       });
     }
@@ -1121,30 +1114,6 @@ const WorkerProfile = () => {
           </Button>
         </div>
       </div>
-
-      {/* CV Viewer Dialog */}
-      <Dialog open={showCvDialog} onOpenChange={(open) => {
-        setShowCvDialog(open);
-        if (!open && cvBlobUrl) {
-          window.URL.revokeObjectURL(cvBlobUrl);
-          setCvBlobUrl(null);
-        }
-      }}>
-        <DialogContent className="max-w-4xl h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>CV / Resume</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 h-full min-h-0">
-            {cvBlobUrl && (
-              <iframe
-                src={cvBlobUrl}
-                className="w-full h-full min-h-[60vh] border-0 rounded-md"
-                title="CV Preview"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
