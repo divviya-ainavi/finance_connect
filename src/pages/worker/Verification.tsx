@@ -277,20 +277,6 @@ const Verification = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* Demo Mode Toggle */}
-        <div className="flex items-center justify-between p-4 bg-accent/20 border border-accent/30 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Zap className="h-5 w-5 text-accent" />
-            <div>
-              <p className="font-medium">Demo Mode</p>
-              <p className="text-sm text-muted-foreground">
-                Skip tests and mark them as passed for demo purposes
-              </p>
-            </div>
-          </div>
-          <Switch checked={demoMode} onCheckedChange={setDemoMode} />
-        </div>
-
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Verification</h1>
           <Button variant="outline" onClick={() => navigate("/worker/dashboard")}>
@@ -304,10 +290,19 @@ const Verification = () => {
             {/* Skills Testing */}
             <Card>
               <CardHeader>
-                <CardTitle>Step 1: Skills Testing</CardTitle>
-                <CardDescription>
-                  Complete a test for each role you offer. Pass rate: 80% or higher.
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Step 1: Skills Testing</CardTitle>
+                    <CardDescription>
+                      Complete a test for each role you offer. Pass rate: 80% or higher.
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2 bg-accent/10 px-3 py-2 rounded-lg border border-accent/20">
+                    <Zap className="h-4 w-4 text-accent" />
+                    <span className="text-sm font-medium">Demo: Skip Tests</span>
+                    <Switch checked={demoMode} onCheckedChange={setDemoMode} />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {selectedRoles.length === 0 ? (
