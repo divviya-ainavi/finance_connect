@@ -68,37 +68,24 @@ const Verification = () => {
     company: "",
   });
 
-  const handleSkipAllTests = async () => {
-    if (!workerProfileId || selectedRoles.length === 0) return;
+  const handleSkipTest = async (role: string) => {
+    if (!workerProfileId) return;
     
-    setSkippingTest("all");
+    setSkippingTest(role);
     try {
-      // Get roles that haven't been passed yet
-      const rolesToSkip = selectedRoles.filter(role => {
-        const attempt = testAttempts.find(a => a.role === role);
-        return !attempt?.passed;
-      });
-
-      if (rolesToSkip.length === 0) {
-        toast({ title: "All tests already passed" });
-        return;
-      }
-
-      // Insert passed test attempts for all pending roles
-      const inserts = rolesToSkip.map(role => ({
+      const { error } = await supabase.from("test_attempts").insert({
         worker_profile_id: workerProfileId,
         role: role as "accounts_payable" | "accounts_receivable" | "bookkeeper" | "payroll_clerk" | "management_accountant" | "credit_controller" | "financial_controller" | "finance_manager" | "cfo_fpa",
         passed: true,
         score: 100,
         questions_answered: { demo_skip: true },
-      }));
-
-      const { error } = await supabase.from("test_attempts").insert(inserts);
+      });
+      
       if (error) throw error;
 
       toast({
-        title: "Tests Skipped",
-        description: "All skill tests marked as passed for demo purposes.",
+        title: "Test Skipped",
+        description: `${role.replace(/_/g, ' ')} test marked as passed.`,
       });
       
       fetchVerificationData();
@@ -309,31 +296,13 @@ const Verification = () => {
                       Complete a test for each role you offer. Pass rate: 80% or higher.
                     </CardDescription>
                   </div>
-                  <div 
-                    className="flex items-center gap-2 bg-accent/10 px-3 py-2 rounded-lg border border-accent/20 cursor-pointer"
-                    onClick={() => {
-                      if (!demoMode) {
-                        setDemoMode(true);
-                        handleSkipAllTests();
-                      } else {
-                        setDemoMode(false);
-                      }
-                    }}
-                  >
+                  <div className="flex items-center gap-2 bg-accent/10 px-3 py-2 rounded-lg border border-accent/20">
                     <Zap className="h-4 w-4 text-accent" />
                     <span className="text-sm font-medium">Skip Test</span>
                     <Switch 
                       checked={demoMode} 
-                      onCheckedChange={(checked) => {
-                        setDemoMode(checked);
-                        if (checked) {
-                          handleSkipAllTests();
-                        }
-                      }} 
+                      onCheckedChange={setDemoMode} 
                     />
-                    {skippingTest === "all" && (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -370,10 +339,27 @@ const Verification = () => {
                           </div>
                         </div>
                         <Button
-                          onClick={() => navigate(`/worker/test/${role}`)}
-                          disabled={testStatus.status === "locked" || testStatus.status === "passed"}
+                          onClick={() => {
+                            if (demoMode) {
+                              // Skip this specific test
+                              handleSkipTest(role);
+                            } else {
+                              navigate(`/worker/test/${role}`);
+                            }
+                          }}
+                          disabled={testStatus.status === "locked" || testStatus.status === "passed" || skippingTest === role}
+                          variant={demoMode ? "secondary" : "default"}
                         >
-                          {testStatus.status === "not_started" ? "Start Test" : "Retake Test"}
+                          {skippingTest === role ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : null}
+                          {testStatus.status === "passed" 
+                            ? "Passed" 
+                            : demoMode 
+                              ? "Skip" 
+                              : testStatus.status === "not_started" 
+                                ? "Start Test" 
+                                : "Retake Test"}
                         </Button>
                       </div>
                     );
