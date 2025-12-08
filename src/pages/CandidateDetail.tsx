@@ -57,6 +57,7 @@ const CandidateDetail = () => {
   const [loading, setLoading] = useState(true);
   const [worker, setWorker] = useState<WorkerProfile | null>(null);
   const [isShortlisted, setIsShortlisted] = useState(false);
+  const [existingRequest, setExistingRequest] = useState<{ status: string } | null>(null);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -78,10 +79,42 @@ const CandidateDetail = () => {
     if (user && userType === "business" && id) {
       fetchWorkerProfile();
       checkIfShortlisted();
+      checkExistingRequest();
       fetchReviews();
       fetchProjectsDelivered();
     }
   }, [user, userType, authLoading, id, navigate]);
+
+  const checkExistingRequest = async () => {
+    try {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user!.id)
+        .single();
+
+      if (!profileData) return;
+
+      const { data: businessProfile } = await supabase
+        .from("business_profiles")
+        .select("id")
+        .eq("profile_id", profileData.id)
+        .single();
+
+      if (!businessProfile) return;
+
+      const { data } = await supabase
+        .from("connection_requests")
+        .select("status")
+        .eq("business_profile_id", businessProfile.id)
+        .eq("worker_profile_id", id!)
+        .maybeSingle();
+
+      setExistingRequest(data);
+    } catch (error) {
+      console.error("Error checking existing request:", error);
+    }
+  };
 
   const fetchProjectsDelivered = async () => {
     try {
@@ -539,82 +572,91 @@ const CandidateDetail = () => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-4 border-t">
-                  <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="flex-1">
-                        <Send className="h-4 w-4 mr-2" />
-                        Send Connection Request
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Send Connection Request</DialogTitle>
-                        <DialogDescription>
-                          Provide details about the role you're offering
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <Label htmlFor="message">Message *</Label>
-                          <Textarea
-                            id="message"
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Introduce your company and the opportunity..."
-                            rows={4}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="hours">Hours Per Week *</Label>
-                          <Input
-                            id="hours"
-                            type="number"
-                            value={hoursPerWeek}
-                            onChange={(e) => setHoursPerWeek(e.target.value)}
-                            placeholder="e.g., 20"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="workmode">Work Mode *</Label>
-                          <Select value={remoteOnsite} onValueChange={setRemoteOnsite}>
-                            <SelectTrigger id="workmode">
-                              <SelectValue placeholder="Select work mode" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="remote">Remote</SelectItem>
-                              <SelectItem value="hybrid">Hybrid</SelectItem>
-                              <SelectItem value="onsite">Onsite</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="rate">Rate Offered (£/hour)</Label>
-                          <Input
-                            id="rate"
-                            type="number"
-                            value={rateOffered}
-                            onChange={(e) => setRateOffered(e.target.value)}
-                            placeholder="Optional"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={handleSendRequest} disabled={sending} className="flex-1">
-                          {sending ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            "Send Request"
-                          )}
+                  {existingRequest ? (
+                    <Button className="flex-1" variant={existingRequest.status === 'accepted' ? 'default' : 'secondary'} disabled>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      {existingRequest.status === 'pending' && 'Request Pending'}
+                      {existingRequest.status === 'accepted' && 'Request Accepted'}
+                      {existingRequest.status === 'declined' && 'Request Declined'}
+                    </Button>
+                  ) : (
+                    <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="flex-1">
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Connection Request
                         </Button>
-                        <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Send Connection Request</DialogTitle>
+                          <DialogDescription>
+                            Provide details about the role you're offering
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div>
+                            <Label htmlFor="message">Message *</Label>
+                            <Textarea
+                              id="message"
+                              value={message}
+                              onChange={(e) => setMessage(e.target.value)}
+                              placeholder="Introduce your company and the opportunity..."
+                              rows={4}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="hours">Hours Per Week *</Label>
+                            <Input
+                              id="hours"
+                              type="number"
+                              value={hoursPerWeek}
+                              onChange={(e) => setHoursPerWeek(e.target.value)}
+                              placeholder="e.g., 20"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="workmode">Work Mode *</Label>
+                            <Select value={remoteOnsite} onValueChange={setRemoteOnsite}>
+                              <SelectTrigger id="workmode">
+                                <SelectValue placeholder="Select work mode" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="remote">Remote</SelectItem>
+                                <SelectItem value="hybrid">Hybrid</SelectItem>
+                                <SelectItem value="onsite">Onsite</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="rate">Rate Offered (£/hour)</Label>
+                            <Input
+                              id="rate"
+                              type="number"
+                              value={rateOffered}
+                              onChange={(e) => setRateOffered(e.target.value)}
+                              placeholder="Optional"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleSendRequest} disabled={sending} className="flex-1">
+                            {sending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              "Send Request"
+                            )}
+                          </Button>
+                          <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                   <Button onClick={handleToggleShortlist} variant="outline">
                     <Star className={`h-4 w-4 mr-2 ${isShortlisted ? "fill-accent text-accent" : ""}`} />
                     {isShortlisted ? "Shortlisted" : "Add to Shortlist"}
