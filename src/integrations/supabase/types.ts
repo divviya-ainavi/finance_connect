@@ -58,6 +58,8 @@ export type Database = {
           latitude: number | null
           location: string | null
           location_constraints: string | null
+          location_constraints_latitude: number | null
+          location_constraints_longitude: number | null
           logo_url: string | null
           longitude: number | null
           max_commute_km: number | null
@@ -81,6 +83,8 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           location_constraints?: string | null
+          location_constraints_latitude?: number | null
+          location_constraints_longitude?: number | null
           logo_url?: string | null
           longitude?: number | null
           max_commute_km?: number | null
@@ -104,6 +108,8 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           location_constraints?: string | null
+          location_constraints_latitude?: number | null
+          location_constraints_longitude?: number | null
           logo_url?: string | null
           longitude?: number | null
           max_commute_km?: number | null
@@ -886,6 +892,8 @@ export type Database = {
           latitude: number | null
           location: string | null
           location_constraints: string | null
+          location_constraints_latitude: number | null
+          location_constraints_longitude: number | null
           longitude: number | null
           max_commute_km: number | null
           max_days_onsite: number | null
@@ -928,6 +936,8 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           location_constraints?: string | null
+          location_constraints_latitude?: number | null
+          location_constraints_longitude?: number | null
           longitude?: number | null
           max_commute_km?: number | null
           max_days_onsite?: number | null
@@ -972,6 +982,8 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           location_constraints?: string | null
+          location_constraints_latitude?: number | null
+          location_constraints_longitude?: number | null
           longitude?: number | null
           max_commute_km?: number | null
           max_days_onsite?: number | null
