@@ -244,7 +244,26 @@ const Verification = () => {
     return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
   };
 
-  // Calculate overall statuses for score box
+  // Calculate overall statuses for score box dynamically from actual data
+  const getTestingStatus = () => {
+    if (selectedRoles.length === 0) return "not_started";
+    const passedTests = testAttempts.filter(a => a.passed);
+    const allPassed = selectedRoles.every(role => 
+      passedTests.some(a => a.role === role)
+    );
+    if (allPassed) return "passed";
+    if (passedTests.length > 0) return "in_progress";
+    return "not_started";
+  };
+
+  const getReferencesStatus = () => {
+    if (references.length === 0) return "not_started";
+    const verifiedRefs = references.filter(r => r.status === "verified");
+    if (verifiedRefs.length >= 2) return "verified";
+    if (references.length > 0) return "pending";
+    return "not_started";
+  };
+
   const getIdVerificationStatus = () => {
     const idDocs = idVerifications.filter((v) => !v.is_insurance);
     if (idDocs.length === 0) return "not_submitted";
@@ -464,8 +483,8 @@ const Verification = () => {
           <div className="lg:col-span-1">
             <div className="sticky top-6">
               <VerificationScoreBox
-                testingStatus={verificationStatus?.testing_status || "not_started"}
-                referencesStatus={verificationStatus?.references_status || "not_started"}
+                testingStatus={getTestingStatus()}
+                referencesStatus={getReferencesStatus()}
                 idVerificationStatus={getIdVerificationStatus()}
                 insuranceStatus={getInsuranceStatus()}
                 approvalStatus={approvalStatus}

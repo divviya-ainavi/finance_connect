@@ -38,6 +38,15 @@ interface ConnectionRequest {
   };
 }
 
+interface TestAttempt {
+  role: string;
+  passed: boolean;
+}
+
+interface Reference {
+  status: string;
+}
+
 const WorkerDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -45,6 +54,8 @@ const WorkerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<WorkerProfile | null>(null);
   const [verification, setVerification] = useState<VerificationStatus | null>(null);
+  const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
+  const [references, setReferences] = useState<Reference[]>([]);
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [acceptedRequests, setAcceptedRequests] = useState<ConnectionRequest[]>([]);
   const [profileCompletion, setProfileCompletion] = useState(0);
@@ -84,9 +95,25 @@ const WorkerDashboard = () => {
             .from("verification_statuses")
             .select("*")
             .eq("worker_profile_id", workerProfile.id)
-            .single();
+            .maybeSingle();
 
           setVerification(verificationData);
+
+          // Fetch test attempts for dynamic status calculation
+          const { data: testAttemptsData } = await supabase
+            .from("test_attempts")
+            .select("role, passed")
+            .eq("worker_profile_id", workerProfile.id);
+
+          setTestAttempts(testAttemptsData || []);
+
+          // Fetch references for dynamic status calculation
+          const { data: referencesData } = await supabase
+            .from("worker_references")
+            .select("status")
+            .eq("worker_profile_id", workerProfile.id);
+
+          setReferences(referencesData || []);
 
           // Fetch connection requests
           const { data: requestsData } = await supabase
@@ -198,6 +225,27 @@ const WorkerDashboard = () => {
     }
   };
 
+  // Calculate dynamic testing status
+  const getTestingStatus = () => {
+    if (!profile?.roles || profile.roles.length === 0) return "not_started";
+    const passedTests = testAttempts.filter(a => a.passed);
+    const allPassed = profile.roles.every(role => 
+      passedTests.some(a => a.role === role)
+    );
+    if (allPassed) return "passed";
+    if (passedTests.length > 0) return "in_progress";
+    return "not_started";
+  };
+
+  // Calculate dynamic references status
+  const getReferencesStatus = () => {
+    if (references.length === 0) return "not_started";
+    const verifiedRefs = references.filter(r => r.status === "verified");
+    if (verifiedRefs.length >= 2) return "verified";
+    if (references.length > 0) return "pending";
+    return "not_started";
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { variant: any; label: string }> = {
       not_started: { variant: "secondary", label: "Not Started" },
@@ -205,6 +253,7 @@ const WorkerDashboard = () => {
       completed: { variant: "default", label: "Completed" },
       verified: { variant: "default", label: "Verified" },
       passed: { variant: "default", label: "Passed" },
+      pending: { variant: "secondary", label: "Pending" },
     };
     const config = statusMap[status] || statusMap.not_started;
     return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -361,15 +410,15 @@ const WorkerDashboard = () => {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Skills Testing</span>
-                {verification && getStatusBadge(verification.testing_status)}
+                {getStatusBadge(getTestingStatus())}
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">References</span>
-                {verification && getStatusBadge(verification.references_status)}
+                {getStatusBadge(getReferencesStatus())}
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Interview</span>
-                {verification && getStatusBadge(verification.interview_status)}
+                {verification ? getStatusBadge(verification.interview_status) : getStatusBadge("not_started")}
               </div>
               <p className="text-xs text-muted-foreground mt-4">
                 Complete verification steps to increase your visibility to businesses.
