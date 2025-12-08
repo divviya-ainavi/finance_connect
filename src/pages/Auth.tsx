@@ -59,6 +59,10 @@ const Auth = () => {
   const [location, setLocation] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [locationMode, setLocationMode] = useState<"distance" | "time">("distance");
+  const [maxCommuteKm, setMaxCommuteKm] = useState("");
+  const [travelTimeMinutes, setTravelTimeMinutes] = useState("");
+  const [locationConstraints, setLocationConstraints] = useState("");
   const [website, setWebsite] = useState("");
   const [selectedUserType, setSelectedUserType] = useState<"worker" | "business">(
     (searchParams.get("type") as "worker" | "business") || "worker"
@@ -162,6 +166,9 @@ const Auth = () => {
                 location: location || null,
                 latitude: latitude,
                 longitude: longitude,
+                max_commute_km: maxCommuteKm ? parseInt(maxCommuteKm) : null,
+                travel_time_minutes: travelTimeMinutes ? parseInt(travelTimeMinutes) : null,
+                location_constraints: locationConstraints || null,
                 website: website || null,
               });
 
@@ -610,6 +617,56 @@ const Auth = () => {
                             setLongitude(lng);
                           }}
                           placeholder="Search for your business address..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Travel Preference</Label>
+                        <div className="flex gap-4 mb-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="locationMode"
+                              checked={locationMode === "distance"}
+                              onChange={() => setLocationMode("distance")}
+                              className="accent-primary"
+                            />
+                            <span className="text-sm">Max Distance (km)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="locationMode"
+                              checked={locationMode === "time"}
+                              onChange={() => setLocationMode("time")}
+                              className="accent-primary"
+                            />
+                            <span className="text-sm">Max Travel Time (mins)</span>
+                          </label>
+                        </div>
+                        {locationMode === "distance" ? (
+                          <Input
+                            type="number"
+                            placeholder="e.g., 25"
+                            value={maxCommuteKm}
+                            onChange={(e) => setMaxCommuteKm(e.target.value)}
+                          />
+                        ) : (
+                          <Input
+                            type="number"
+                            placeholder="e.g., 45"
+                            value={travelTimeMinutes}
+                            onChange={(e) => setTravelTimeMinutes(e.target.value)}
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="location-constraints">Location Constraints (Optional)</Label>
+                        <Input
+                          id="location-constraints"
+                          type="text"
+                          placeholder='e.g., "Only South London", "Near train station"'
+                          value={locationConstraints}
+                          onChange={(e) => setLocationConstraints(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
