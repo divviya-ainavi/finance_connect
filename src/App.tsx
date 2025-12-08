@@ -38,7 +38,7 @@ import ReviewsModeration from "./pages/admin/reviews/ReviewsModeration";
 import DisputesManagement from "./pages/admin/disputes/DisputesManagement";
 import PlatformSettings from "./pages/admin/settings/PlatformSettings";
 import AnalyticsDashboard from "./pages/admin/analytics/AnalyticsDashboard";
-
+import LocationsMap from "./pages/admin/map/LocationsMap";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -82,6 +82,7 @@ const App = () => (
             <Route path="/admin/disputes" element={<DisputesManagement />} />
             <Route path="/admin/settings" element={<PlatformSettings />} />
             <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
+            <Route path="/admin/map" element={<LocationsMap />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

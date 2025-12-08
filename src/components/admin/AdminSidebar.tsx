@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ const navItems = [
   { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { title: 'Finance Professionals', href: '/admin/workers', icon: Users },
   { title: 'Businesses', href: '/admin/businesses', icon: Building2 },
+  { title: 'Locations Map', href: '/admin/map', icon: MapPin },
   { title: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
   { title: 'Disputes', href: '/admin/disputes', icon: AlertTriangle },
   { title: 'Settings', href: '/admin/settings', icon: Settings },
