@@ -747,14 +747,27 @@ const WorkerProfile = () => {
                       variant="ghost" 
                       size="sm" 
                       onClick={async () => {
-                        if (cvSignedUrl) {
-                          window.open(cvSignedUrl, '_blank');
-                        } else if (cvUrl) {
-                          const signedUrl = await getSignedCvUrl(cvUrl);
-                          if (signedUrl) {
-                            setCvSignedUrl(signedUrl);
-                            window.open(signedUrl, '_blank');
+                        if (!cvUrl) return;
+                        try {
+                          const { data, error } = await supabase.storage.from("cvs").download(cvUrl);
+                          if (error) throw error;
+                          const blob = new Blob([data], { type: 'application/pdf' });
+                          const blobUrl = window.URL.createObjectURL(blob);
+                          const newTab = window.open(blobUrl, '_blank');
+                          if (!newTab) {
+                            toast({
+                              title: "Popup blocked",
+                              description: "Please allow popups to view the CV",
+                              variant: "destructive",
+                            });
                           }
+                        } catch (error) {
+                          console.error("Error viewing CV:", error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to open CV",
+                            variant: "destructive",
+                          });
                         }
                       }}
                     >
