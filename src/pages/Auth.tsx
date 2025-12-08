@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -16,6 +17,29 @@ const emailSchema = z.string().email("Invalid email address").max(255);
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters").max(100);
 const nameSchema = z.string().min(1, "Name is required").max(100);
 const companyNameSchema = z.string().min(1, "Company name is required").max(100);
+
+const INDUSTRIES = [
+  "Accounting & Finance",
+  "Technology",
+  "Healthcare",
+  "Legal",
+  "Manufacturing",
+  "Retail",
+  "Construction",
+  "Real Estate",
+  "Professional Services",
+  "Non-Profit",
+  "Other",
+];
+
+const COMPANY_SIZES = [
+  "1-10",
+  "11-50",
+  "51-200",
+  "201-500",
+  "501-1000",
+  "1000+",
+];
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -29,6 +53,10 @@ const Auth = () => {
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactRole, setContactRole] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [companySize, setCompanySize] = useState("");
+  const [location, setLocation] = useState("");
+  const [website, setWebsite] = useState("");
   const [selectedUserType, setSelectedUserType] = useState<"worker" | "business">(
     (searchParams.get("type") as "worker" | "business") || "worker"
   );
@@ -117,6 +145,10 @@ const Auth = () => {
                 company_name: companyName,
                 contact_name: contactName,
                 contact_role: contactRole || null,
+                industry: industry || null,
+                company_size: companySize || null,
+                location: location || null,
+                website: website || null,
               });
 
             if (businessError) throw businessError;
@@ -502,6 +534,58 @@ const Auth = () => {
                           placeholder="Finance Director"
                           value={contactRole}
                           onChange={(e) => setContactRole(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Industry</Label>
+                          <Select value={industry} onValueChange={setIndustry}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select industry" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {INDUSTRIES.map((ind) => (
+                                <SelectItem key={ind} value={ind}>
+                                  {ind}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Company Size</Label>
+                          <Select value={companySize} onValueChange={setCompanySize}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select size" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COMPANY_SIZES.map((size) => (
+                                <SelectItem key={size} value={size}>
+                                  {size} employees
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-location">Location</Label>
+                        <Input
+                          id="signup-location"
+                          type="text"
+                          placeholder="London, UK"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-website">Website (Optional)</Label>
+                        <Input
+                          id="signup-website"
+                          type="text"
+                          placeholder="www.company.com"
+                          value={website}
+                          onChange={(e) => setWebsite(e.target.value)}
                         />
                       </div>
                     </>
