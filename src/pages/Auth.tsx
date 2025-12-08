@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Briefcase, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { z } from "zod";
 import { LocationPicker } from "@/components/location/LocationPicker";
 
@@ -178,7 +179,7 @@ const Auth = () => {
 
         toast({
           title: "Account created!",
-          description: "Welcome to FinanceConnect.",
+          description: "Welcome to Axcelera.",
         });
 
         // Redirect based on user type
@@ -408,8 +409,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Briefcase className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-semibold">FinanceConnect</span>
+            <img src={logo} alt="Axcelera" className="h-10" />
           </div>
           <p className="text-muted-foreground">
             Sign in or create an account to get started

@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Briefcase, Loader2, MapPin, CheckCircle, Star, Search as SearchIcon, User } from "lucide-react";
+import { Loader2, MapPin, CheckCircle, Star, Search as SearchIcon, User } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 
@@ -357,8 +358,7 @@ const Search = () => {
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Briefcase className="h-6 w-6 text-primary" />
-            <span className="text-xl font-semibold">FinanceConnect</span>
+            <img src={logo} alt="Axcelera" className="h-8" />
           </div>
           <div className="flex gap-2">
             {!user ? (
@@ -525,10 +525,9 @@ const Search = () => {
                       </p>
                     )}
                     {(candidate.projects_delivered ?? 0) > 0 && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Briefcase className="h-3 w-3" />
-                        {candidate.projects_delivered} projects via FinanceConnect
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {candidate.projects_delivered} projects via Axcelera
+                      </p>
                     )}
                     {getVerificationCount(candidate) > 0 && (
                       <div className="flex items-center gap-2 pt-2 border-t">
@@ -611,10 +610,9 @@ const Search = () => {
                       </p>
                     )}
                     {(candidate.projects_delivered ?? 0) > 0 && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Briefcase className="h-3 w-3" />
-                        {candidate.projects_delivered} projects via FinanceConnect
-                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {candidate.projects_delivered} projects via Axcelera
+                      </p>
                     )}
                   </div>
                 </CardHeader>

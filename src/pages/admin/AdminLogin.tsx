@@ -62,7 +62,7 @@ export default function AdminLogin() {
           </div>
           <CardTitle className="text-2xl font-bold">Admin Portal</CardTitle>
           <CardDescription>
-            Sign in to access the FinanceConnect admin dashboard
+            Sign in to access the Axcelera admin dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -72,7 +72,7 @@ export default function AdminLogin() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@financeconnect.com"
+                placeholder="admin@axcelera.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

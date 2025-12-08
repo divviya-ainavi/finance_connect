@@ -203,7 +203,7 @@ const WorkerSettings = () => {
                   <div>
                     <p className="font-medium">Platform Updates</p>
                     <p className="text-sm text-muted-foreground">
-                      News and updates about FinanceConnect
+                      News and updates about Axcelera
                     </p>
                   </div>
                   <Switch />

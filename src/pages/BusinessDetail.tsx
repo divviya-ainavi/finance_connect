@@ -188,7 +188,7 @@ const BusinessDetail = () => {
                       </span>
                     </div>
                   ) : (
-                    <Badge variant="secondary">New on FinanceConnect</Badge>
+                    <Badge variant="secondary">New on Axcelera</Badge>
                   )}
                 </div>
 
@@ -226,7 +226,7 @@ const BusinessDetail = () => {
           <Card className="shadow-soft">
             <CardContent className="pt-6 text-center">
               <div className="text-3xl font-bold text-primary mb-1">{projectsHired}</div>
-              <p className="text-sm text-muted-foreground">Workers hired via FinanceConnect</p>
+              <p className="text-sm text-muted-foreground">Workers hired via Axcelera</p>
             </CardContent>
           </Card>
 
