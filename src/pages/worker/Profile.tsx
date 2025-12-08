@@ -300,65 +300,6 @@ const WorkerProfile = () => {
     return data.signedUrl;
   };
 
-  const handleViewCv = async () => {
-    if (!cvUrl) return;
-    
-    try {
-      const signedUrl = cvSignedUrl || await getSignedCvUrl(cvUrl);
-      if (signedUrl) {
-        setCvSignedUrl(signedUrl);
-        // Create a temporary link element and trigger download/view
-        const link = document.createElement('a');
-        link.href = signedUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        toast({
-          title: "Error",
-          description: "Could not generate CV link. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error viewing CV:", error);
-      toast({
-        title: "Error",
-        description: "Failed to open CV. Try disabling ad blockers or downloading instead.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDownloadCv = async () => {
-    if (!cvUrl) return;
-    
-    try {
-      const { data, error } = await supabase.storage.from("cvs").download(cvUrl);
-      if (error) throw error;
-      
-      // Create blob URL and download
-      const blob = new Blob([data], { type: data.type });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = cvUrl.split('/').pop() || 'cv.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading CV:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download CV",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handlePhotoUpload = async (file: File) => {
     if (!user) return null;
 
@@ -805,16 +746,19 @@ const WorkerProfile = () => {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={handleViewCv}
+                      onClick={async () => {
+                        if (cvSignedUrl) {
+                          window.open(cvSignedUrl, '_blank');
+                        } else if (cvUrl) {
+                          const signedUrl = await getSignedCvUrl(cvUrl);
+                          if (signedUrl) {
+                            setCvSignedUrl(signedUrl);
+                            window.open(signedUrl, '_blank');
+                          }
+                        }
+                      }}
                     >
                       View
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleDownloadCv}
-                    >
-                      Download
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleCvDelete}>
                       Delete
