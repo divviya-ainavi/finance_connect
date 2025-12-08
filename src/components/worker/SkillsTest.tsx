@@ -218,9 +218,9 @@ const SkillsTest = () => {
               }
             >
               {currentQuestion.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                  <Label htmlFor={`option-${index}`} className="cursor-pointer">
+                <div key={`${currentQuestion.id}-${index}`} className="flex items-center space-x-2">
+                  <RadioGroupItem value={index.toString()} id={`option-${currentQuestion.id}-${index}`} />
+                  <Label htmlFor={`option-${currentQuestion.id}-${index}`} className="cursor-pointer">
                     {option}
                   </Label>
                 </div>
