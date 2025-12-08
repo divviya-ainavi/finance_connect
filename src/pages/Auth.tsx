@@ -86,9 +86,15 @@ const Auth = () => {
       
       if (selectedUserType === "worker") {
         nameSchema.parse(name);
+        if (!location) {
+          throw new Error("Location is required");
+        }
       } else {
         companyNameSchema.parse(companyName);
         nameSchema.parse(contactName);
+        if (!location) {
+          throw new Error("Location is required");
+        }
       }
 
       const redirectUrl = `${window.location.origin}/`;
@@ -129,6 +135,9 @@ const Auth = () => {
                 profile_id: profileData.id,
                 name: name,
                 visibility_mode: "anonymous",
+                location: location,
+                latitude: latitude,
+                longitude: longitude,
               });
 
             if (workerError) throw workerError;
@@ -496,17 +505,33 @@ const Auth = () => {
                   </div>
                   
                   {selectedUserType === "worker" ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">Your Name</Label>
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="John Doe"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                      />
-                    </div>
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name">Your Name</Label>
+                        <Input
+                          id="signup-name"
+                          type="text"
+                          placeholder="John Doe"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Location <span className="text-destructive">*</span></Label>
+                        <LocationPicker
+                          value={location}
+                          latitude={latitude}
+                          longitude={longitude}
+                          onChange={(loc, lat, lng) => {
+                            setLocation(loc);
+                            setLatitude(lat);
+                            setLongitude(lng);
+                          }}
+                          placeholder="Search for your location..."
+                        />
+                      </div>
+                    </>
                   ) : (
                     <>
                       <div className="space-y-2">
@@ -574,7 +599,7 @@ const Auth = () => {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label>Location</Label>
+                        <Label>Location <span className="text-destructive">*</span></Label>
                         <LocationPicker
                           value={location}
                           latitude={latitude}
