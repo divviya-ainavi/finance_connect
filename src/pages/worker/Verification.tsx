@@ -112,10 +112,44 @@ const Verification = () => {
     }
   };
 
+  const handleUnskipAllTests = async () => {
+    if (!workerProfileId) return;
+    
+    setSkippingTest("all");
+    try {
+      // Delete test attempts that were skipped (have demo_skip flag)
+      const { error } = await supabase
+        .from("test_attempts")
+        .delete()
+        .eq("worker_profile_id", workerProfileId)
+        .contains("questions_answered", { demo_skip: true });
+      
+      if (error) throw error;
+
+      toast({
+        title: "Tests Enabled",
+        description: "You can now attend the skill tests.",
+      });
+      
+      fetchVerificationData();
+    } catch (error) {
+      console.error("Error enabling tests:", error);
+      toast({
+        title: "Error",
+        description: "Failed to enable tests. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSkippingTest(null);
+    }
+  };
+
   const handleToggleSkipTest = async (enabled: boolean) => {
     setDemoMode(enabled);
     if (enabled) {
       await handleSkipAllTests();
+    } else {
+      await handleUnskipAllTests();
     }
   };
 
