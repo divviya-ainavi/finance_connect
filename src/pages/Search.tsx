@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Loader2, MapPin, CheckCircle, Star, Search as SearchIcon, User } from "lucide-react";
+import { Loader2, MapPin, CheckCircle, Star, Search as SearchIcon, User, LayoutGrid, Map } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { LocationMap, MapMarker } from "@/components/location/LocationMap";
 
 interface WorkerProfile {
   id: string;
@@ -20,6 +21,8 @@ interface WorkerProfile {
   profile_id: string;
   roles: string[];
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
   onsite_preference: string;
   visibility_mode: string;
   industries: string[];
@@ -52,6 +55,7 @@ const Search = () => {
   const [minRate, setMinRate] = useState("");
   const [maxRate, setMaxRate] = useState("");
   const [recommendedCandidates, setRecommendedCandidates] = useState<WorkerProfile[]>([]);
+  const [viewMode, setViewMode] = useState<'card' | 'map'>('card');
 
   useEffect(() => {
     fetchCandidates();
@@ -470,9 +474,31 @@ const Search = () => {
         {/* Recommended for You */}
         {user && userType === "business" && recommendedCandidates.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
-              <h2 className="text-2xl font-semibold">Recommended for You</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+                <h2 className="text-2xl font-semibold">Recommended for You</h2>
+              </div>
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'card' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('card')}
+                  className="gap-1.5"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Cards
+                </Button>
+                <Button
+                  variant={viewMode === 'map' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('map')}
+                  className="gap-1.5"
+                >
+                  <Map className="h-4 w-4" />
+                  Map
+                </Button>
+              </div>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               {recommendedCandidates.map((candidate) => (
@@ -555,6 +581,43 @@ const Search = () => {
               <p className="text-muted-foreground">
                 No candidates match your search criteria. Try adjusting your filters.
               </p>
+            </CardContent>
+          </Card>
+        ) : viewMode === 'map' ? (
+          <Card className="shadow-soft overflow-hidden">
+            <CardContent className="p-0">
+              <LocationMap
+                markers={filteredCandidates
+                  .filter(c => c.latitude && c.longitude)
+                  .map((candidate): MapMarker => ({
+                    id: candidate.id,
+                    lat: candidate.latitude!,
+                    lng: candidate.longitude!,
+                    label: candidate.name,
+                    type: 'worker',
+                    photoUrl: candidate.photo_url,
+                    popupContent: `
+                      <div class="p-2 min-w-[200px]">
+                        <strong class="text-sm">${candidate.name}</strong>
+                        <p class="text-xs text-gray-500">${candidate.location || 'Location not specified'}</p>
+                        ${candidate.average_rating ? `<p class="text-xs">★ ${candidate.average_rating.toFixed(1)} (${candidate.review_count || 0} reviews)</p>` : ''}
+                        ${candidate.hourly_rate_min && candidate.hourly_rate_max ? `<p class="text-xs font-medium">£${candidate.hourly_rate_min}-${candidate.hourly_rate_max}/hr</p>` : ''}
+                        <p class="text-xs text-blue-600 mt-1 cursor-pointer">Click to view profile</p>
+                      </div>
+                    `
+                  }))}
+                height="500px"
+                onMarkerClick={(marker) => {
+                  const candidate = filteredCandidates.find(c => c.name === marker.label);
+                  if (candidate) handleCandidateClick(candidate.id);
+                }}
+              />
+              {filteredCandidates.filter(c => !c.latitude || !c.longitude).length > 0 && (
+                <div className="p-3 bg-muted/50 border-t text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4 inline mr-1" />
+                  {filteredCandidates.filter(c => !c.latitude || !c.longitude).length} candidates without location data are not shown on map
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (
