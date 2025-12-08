@@ -304,29 +304,20 @@ const WorkerProfile = () => {
     if (!cvUrl) return;
     
     try {
-      const signedUrl = cvSignedUrl || await getSignedCvUrl(cvUrl);
-      if (signedUrl) {
-        setCvSignedUrl(signedUrl);
-        // Create a temporary link element and trigger download/view
-        const link = document.createElement('a');
-        link.href = signedUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        toast({
-          title: "Error",
-          description: "Could not generate CV link. Please try again.",
-          variant: "destructive",
-        });
-      }
+      // Download the file and create a blob URL to bypass ad blockers
+      const { data, error } = await supabase.storage.from("cvs").download(cvUrl);
+      if (error) throw error;
+      
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+      // Revoke after a delay to allow the new tab to load
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     } catch (error) {
       console.error("Error viewing CV:", error);
       toast({
         title: "Error",
-        description: "Failed to open CV. Try disabling ad blockers or downloading instead.",
+        description: "Failed to open CV. Please try downloading instead.",
         variant: "destructive",
       });
     }
