@@ -30,6 +30,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { openDocument } from "@/lib/storage-utils";
 
 interface WorkerForApproval {
   id: string;
@@ -675,9 +676,16 @@ export const WorkerReviewDialog = ({
                                   variant="link"
                                   size="sm"
                                   className="p-0 h-auto text-primary"
-                                  onClick={() =>
-                                    window.open(doc.document_url, "_blank")
-                                  }
+                                  onClick={async () => {
+                                    const success = await openDocument(doc.document_url, 'cvs');
+                                    if (!success) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to open document",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
                                 >
                                   <ExternalLink className="mr-1 h-3 w-3" /> View
                                   Document
@@ -785,9 +793,16 @@ export const WorkerReviewDialog = ({
                                   variant="link"
                                   size="sm"
                                   className="p-0 h-auto text-primary"
-                                  onClick={() =>
-                                    window.open(qual.document_url, "_blank")
-                                  }
+                                  onClick={async () => {
+                                    const success = await openDocument(qual.document_url, 'cvs');
+                                    if (!success) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to open certificate",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
                                 >
                                   <ExternalLink className="mr-1 h-3 w-3" /> View
                                   Certificate

@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { openDocument } from '@/lib/storage-utils';
 import { 
   ArrowLeft, Ban, CheckCircle, User, MapPin, Briefcase, 
   Clock, Calendar, Languages, GraduationCap, Shield, 
@@ -414,11 +415,22 @@ export default function WorkerDetail() {
                       <Separator />
                       <div>
                         <p className="text-sm text-muted-foreground mb-2">CV</p>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={worker.cv_url} target="_blank" rel="noopener noreferrer">
-                            <FileText className="h-4 w-4 mr-2" />
-                            View CV
-                          </a>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={async () => {
+                            const success = await openDocument(worker.cv_url!, 'cvs');
+                            if (!success) {
+                              toast({
+                                title: "Error",
+                                description: "Failed to open CV document",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          View CV
                         </Button>
                       </div>
                     </>
@@ -801,7 +813,16 @@ export default function WorkerDetail() {
                               variant="link"
                               size="sm"
                               className="p-0 h-auto text-primary"
-                              onClick={() => window.open(doc.document_url, '_blank')}
+                              onClick={async () => {
+                                const success = await openDocument(doc.document_url, 'cvs');
+                                if (!success) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to open document",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
                             >
                               <ExternalLink className="mr-1 h-3 w-3" /> View Document
                             </Button>
