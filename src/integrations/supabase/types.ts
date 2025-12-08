@@ -55,8 +55,10 @@ export type Database = {
           id: string
           industry: string | null
           is_suspended: boolean | null
+          latitude: number | null
           location: string | null
           logo_url: string | null
+          longitude: number | null
           profile_id: string
           suspended_at: string | null
           suspension_reason: string | null
@@ -73,8 +75,10 @@ export type Database = {
           id?: string
           industry?: string | null
           is_suspended?: boolean | null
+          latitude?: number | null
           location?: string | null
           logo_url?: string | null
+          longitude?: number | null
           profile_id: string
           suspended_at?: string | null
           suspension_reason?: string | null
@@ -91,8 +95,10 @@ export type Database = {
           id?: string
           industry?: string | null
           is_suspended?: boolean | null
+          latitude?: number | null
           location?: string | null
           logo_url?: string | null
+          longitude?: number | null
           profile_id?: string
           suspended_at?: string | null
           suspension_reason?: string | null
@@ -868,8 +874,10 @@ export type Database = {
           industries: string[] | null
           is_suspended: boolean | null
           languages: Json | null
+          latitude: number | null
           location: string | null
           location_constraints: string | null
+          longitude: number | null
           max_commute_km: number | null
           max_days_onsite: number | null
           name: string
@@ -908,8 +916,10 @@ export type Database = {
           industries?: string[] | null
           is_suspended?: boolean | null
           languages?: Json | null
+          latitude?: number | null
           location?: string | null
           location_constraints?: string | null
+          longitude?: number | null
           max_commute_km?: number | null
           max_days_onsite?: number | null
           name: string
@@ -950,8 +960,10 @@ export type Database = {
           industries?: string[] | null
           is_suspended?: boolean | null
           languages?: Json | null
+          latitude?: number | null
           location?: string | null
           location_constraints?: string | null
+          longitude?: number | null
           max_commute_km?: number | null
           max_days_onsite?: number | null
           name?: string
