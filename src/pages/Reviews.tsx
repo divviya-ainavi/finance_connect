@@ -36,24 +36,40 @@ const Reviews = () => {
 
   const fetchReviews = async () => {
     try {
-      // Fetch profile name
+      let revieweeProfileId = profileId;
+
+      // Get the profile_id from worker_profiles or business_profiles
+      // since reviewee_profile_id in reviews table references profiles.id
       if (profileType === "worker") {
         const { data: workerProfile } = await supabase
           .from("worker_profiles")
-          .select("name")
+          .select("name, profile_id")
           .eq("id", profileId!)
-          .single();
-        setProfileName(workerProfile?.name || "");
+          .maybeSingle();
+        
+        if (workerProfile) {
+          setProfileName(workerProfile.name || "");
+          revieweeProfileId = workerProfile.profile_id;
+        }
       } else {
         const { data: businessProfile } = await supabase
           .from("business_profiles")
-          .select("company_name")
+          .select("company_name, profile_id")
           .eq("id", profileId!)
-          .single();
-        setProfileName(businessProfile?.company_name || "");
+          .maybeSingle();
+        
+        if (businessProfile) {
+          setProfileName(businessProfile.company_name || "");
+          revieweeProfileId = businessProfile.profile_id;
+        }
       }
 
-      // Fetch reviews with reviewer information
+      if (!revieweeProfileId) {
+        setLoading(false);
+        return;
+      }
+
+      // Fetch reviews with reviewer information using the correct profile_id
       const { data, error } = await supabase
         .from("reviews")
         .select(`
@@ -64,7 +80,7 @@ const Reviews = () => {
             business_profiles (company_name)
           )
         `)
-        .eq("reviewee_profile_id", profileId!)
+        .eq("reviewee_profile_id", revieweeProfileId)
         .eq("is_hidden", false)
         .order("created_at", { ascending: false });
 
