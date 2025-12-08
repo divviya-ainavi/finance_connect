@@ -212,7 +212,8 @@ const SkillsTest = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <RadioGroup
-              value={answers[currentQuestion.id]?.toString()}
+              key={currentQuestion.id}
+              value={answers[currentQuestion.id]?.toString() ?? ""}
               onValueChange={(value) =>
                 handleAnswerChange(currentQuestion.id, parseInt(value))
               }
