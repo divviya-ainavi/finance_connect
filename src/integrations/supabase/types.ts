@@ -57,11 +57,14 @@ export type Database = {
           is_suspended: boolean | null
           latitude: number | null
           location: string | null
+          location_constraints: string | null
           logo_url: string | null
           longitude: number | null
+          max_commute_km: number | null
           profile_id: string
           suspended_at: string | null
           suspension_reason: string | null
+          travel_time_minutes: number | null
           updated_at: string | null
           website: string | null
         }
@@ -77,11 +80,14 @@ export type Database = {
           is_suspended?: boolean | null
           latitude?: number | null
           location?: string | null
+          location_constraints?: string | null
           logo_url?: string | null
           longitude?: number | null
+          max_commute_km?: number | null
           profile_id: string
           suspended_at?: string | null
           suspension_reason?: string | null
+          travel_time_minutes?: number | null
           updated_at?: string | null
           website?: string | null
         }
@@ -97,11 +103,14 @@ export type Database = {
           is_suspended?: boolean | null
           latitude?: number | null
           location?: string | null
+          location_constraints?: string | null
           logo_url?: string | null
           longitude?: number | null
+          max_commute_km?: number | null
           profile_id?: string
           suspended_at?: string | null
           suspension_reason?: string | null
+          travel_time_minutes?: number | null
           updated_at?: string | null
           website?: string | null
         }
