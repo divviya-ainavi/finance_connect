@@ -45,6 +45,7 @@ const BusinessDashboard = () => {
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<ConnectionRequest | null>(null);
+  const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
 
   useEffect(() => {
     if (user) {
@@ -109,6 +110,26 @@ const BusinessDashboard = () => {
               setAverageRating(avg);
             }
             setReviewCount(reviewsCount || 0);
+          }
+
+          // Fetch unread message count for accepted & paid connections
+          const { data: paidConnections } = await supabase
+            .from("connection_requests")
+            .select("id")
+            .eq("business_profile_id", businessProfile.id)
+            .eq("status", "accepted")
+            .eq("payment_status", "paid");
+
+          if (paidConnections && paidConnections.length > 0) {
+            const connectionIds = paidConnections.map(c => c.id);
+            const { count: unreadCount } = await supabase
+              .from("messages")
+              .select("*", { count: "exact", head: true })
+              .in("connection_request_id", connectionIds)
+              .eq("is_read", false)
+              .neq("sender_profile_id", profileData.id);
+
+            setUnreadMessageCount(unreadCount || 0);
           }
         }
       }
@@ -252,8 +273,13 @@ const BusinessDashboard = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/messages")}>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/messages")} className="relative">
                     <MessageSquare className="h-4 w-4" />
+                    {unreadMessageCount > 0 && (
+                      <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                        {unreadMessageCount}
+                      </Badge>
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
