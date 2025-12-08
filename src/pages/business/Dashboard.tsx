@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Briefcase, Loader2, Search, Users, Clock, LogOut, Star, MessageSquare, Settings, Building2, CreditCard } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
 import PaymentDialog from "@/components/payment/PaymentDialog";
@@ -248,15 +249,42 @@ const BusinessDashboard = () => {
             <span className="text-xl font-semibold">Business Dashboard</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/messages")}>
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/business/profile")}>
-              <Building2 className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/business/settings")}>
-              <Settings className="h-4 w-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/messages")}>
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Messages</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/business/profile")}>
+                    <Building2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Company Profile</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/business/settings")}>
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Settings</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button variant="outline" onClick={signOut} size="sm">
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
