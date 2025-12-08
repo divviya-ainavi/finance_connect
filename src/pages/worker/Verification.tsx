@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, CheckCircle2, XCircle, Clock, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { VerificationScoreBox } from "@/components/worker/VerificationScoreBox";
 import { IdInsuranceUpload } from "@/components/worker/IdInsuranceUpload";
@@ -58,12 +59,47 @@ const Verification = () => {
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
   const [approvalStatus, setApprovalStatus] = useState("pending");
   const [showAddReference, setShowAddReference] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [skippingTest, setSkippingTest] = useState<string | null>(null);
   const [newReference, setNewReference] = useState({
     name: "",
     email: "",
     role: "",
     company: "",
   });
+
+  const handleSkipTest = async (role: string) => {
+    if (!workerProfileId) return;
+    
+    setSkippingTest(role);
+    try {
+      // Insert a passed test attempt
+      const { error } = await supabase.from("test_attempts").insert({
+        worker_profile_id: workerProfileId,
+        role: role as "accounts_payable" | "accounts_receivable" | "bookkeeper" | "payroll_clerk" | "management_accountant" | "credit_controller" | "financial_controller" | "finance_manager" | "cfo_fpa",
+        passed: true,
+        score: 100,
+        questions_answered: { demo_skip: true },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Test Skipped",
+        description: `${getRoleLabel(role)} test marked as passed for demo purposes.`,
+      });
+      
+      fetchVerificationData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSkippingTest(null);
+    }
+  };
 
   useEffect(() => {
     if (!user || userType !== "worker") {
@@ -241,6 +277,20 @@ const Verification = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
+        {/* Demo Mode Toggle */}
+        <div className="flex items-center justify-between p-4 bg-accent/20 border border-accent/30 rounded-lg">
+          <div className="flex items-center gap-3">
+            <Zap className="h-5 w-5 text-accent" />
+            <div>
+              <p className="font-medium">Demo Mode</p>
+              <p className="text-sm text-muted-foreground">
+                Skip tests and mark them as passed for demo purposes
+              </p>
+            </div>
+          </div>
+          <Switch checked={demoMode} onCheckedChange={setDemoMode} />
+        </div>
+
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Verification</h1>
           <Button variant="outline" onClick={() => navigate("/worker/dashboard")}>
@@ -291,12 +341,27 @@ const Verification = () => {
                             )}
                           </div>
                         </div>
-                        <Button
-                          onClick={() => navigate(`/worker/test/${role}`)}
-                          disabled={testStatus.status === "locked" || testStatus.status === "passed"}
-                        >
-                          {testStatus.status === "not_started" ? "Start Test" : "Retake Test"}
-                        </Button>
+                        <div className="flex gap-2">
+                          {demoMode && testStatus.status !== "passed" && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => handleSkipTest(role)}
+                              disabled={skippingTest === role}
+                            >
+                              {skippingTest === role ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Skip Test"
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => navigate(`/worker/test/${role}`)}
+                            disabled={testStatus.status === "locked" || testStatus.status === "passed"}
+                          >
+                            {testStatus.status === "not_started" ? "Start Test" : "Retake Test"}
+                          </Button>
+                        </div>
                       </div>
                     );
                   })
