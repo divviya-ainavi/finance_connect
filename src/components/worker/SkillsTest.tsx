@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Timer } from "lucide-react";
+import { Loader2, Timer, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Question {
@@ -192,9 +192,19 @@ const SkillsTest = () => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">
-            Skills Test: {role?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-          </h1>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/worker/verification")}
+              title="Exit test"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold">
+              Skills Test: {role?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+            </h1>
+          </div>
           <div className="flex items-center gap-2 text-lg font-semibold">
             <Timer className="h-5 w-5" />
             {formatTime(timeLeft)}
