@@ -27,6 +27,7 @@ const ROLES = [
 interface WorkerData {
   id: string;
   name: string;
+  photo_url: string | null;
   location: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -41,6 +42,7 @@ interface WorkerData {
 interface BusinessData {
   id: string;
   company_name: string;
+  logo_url: string | null;
   location: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -89,6 +91,7 @@ const LocationsMap = () => {
         .select(`
           id,
           name,
+          photo_url,
           location,
           latitude,
           longitude,
@@ -105,7 +108,7 @@ const LocationsMap = () => {
       // Fetch businesses
       const { data: businessesData, error: businessesError } = await supabase
         .from('business_profiles')
-        .select('id, company_name, location, latitude, longitude, industry');
+        .select('id, company_name, logo_url, location, latitude, longitude, industry');
 
       if (businessesError) throw businessesError;
 
@@ -173,6 +176,8 @@ const LocationsMap = () => {
           .map((r) => ROLES.find((role) => role.value === r)?.label || r)
           .slice(0, 2)
           .join(', ');
+        
+        const initials = worker.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
         newMarkers.push({
           id: worker.id,
@@ -180,6 +185,8 @@ const LocationsMap = () => {
           lng: worker.longitude!,
           label: worker.name,
           type: 'worker',
+          photoUrl: worker.photo_url,
+          initials,
           popupContent: `
             <div style="min-width: 200px;">
               <strong>${worker.name}</strong><br/>
@@ -206,12 +213,16 @@ const LocationsMap = () => {
       }
 
       filteredBusinesses.forEach((business) => {
+        const initials = business.company_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        
         newMarkers.push({
           id: business.id,
           lat: business.latitude!,
           lng: business.longitude!,
           label: business.company_name,
           type: 'business',
+          photoUrl: business.logo_url,
+          initials,
           popupContent: `
             <div style="min-width: 200px;">
               <strong>${business.company_name}</strong><br/>
