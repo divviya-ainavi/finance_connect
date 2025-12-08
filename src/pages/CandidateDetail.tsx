@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2, MessageSquare, Briefcase, Shield, Clock, TrendingUp } from "lucide-react";
+import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2, MessageSquare, Briefcase, Shield, Clock, TrendingUp, FileText, ExternalLink } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -34,6 +34,7 @@ interface WorkerProfile {
   own_equipment: boolean;
   availability: any;
   photo_url?: string | null;
+  cv_url?: string | null;
   hourly_rate_min?: number | null;
   hourly_rate_max?: number | null;
   available_from?: string | null;
@@ -666,6 +667,28 @@ const CandidateDetail = () => {
             </Card>
           </div>
 
+          {/* CV / Resume */}
+          {worker.cv_url && (
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  CV / Resume
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.open(worker.cv_url!, '_blank')}
+                  className="gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View CV
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Roles */}
           <Card className="shadow-soft">
             <CardHeader>
@@ -743,10 +766,10 @@ const CandidateDetail = () => {
                 <CardTitle>Systems</CardTitle>
               </CardHeader>
               <CardContent>
-                {worker.systems && worker.systems.length > 0 ? (
+                {worker.systems && Array.isArray(worker.systems) && worker.systems.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {worker.systems.map((system) => (
-                      <Badge key={system} variant="secondary">
+                    {worker.systems.map((system, index) => (
+                      <Badge key={`system-${index}`} variant="secondary">
                         {system}
                       </Badge>
                     ))}
@@ -762,10 +785,10 @@ const CandidateDetail = () => {
                 <CardTitle>Industries</CardTitle>
               </CardHeader>
               <CardContent>
-                {worker.industries && worker.industries.length > 0 ? (
+                {worker.industries && Array.isArray(worker.industries) && worker.industries.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {worker.industries.map((industry) => (
-                      <Badge key={industry} variant="secondary">
+                    {worker.industries.map((industry, index) => (
+                      <Badge key={`industry-${index}`} variant="secondary">
                         {industry}
                       </Badge>
                     ))}
