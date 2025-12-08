@@ -219,7 +219,7 @@ const Messages = () => {
                           <p className="font-medium truncate">
                             {getOtherPartyName(connection)}
                           </p>
-                          {connection.unreadCount && connection.unreadCount > 0 && (
+                        {connection.unreadCount > 0 && (
                             <Badge variant="default" className="ml-2">
                               {connection.unreadCount}
                             </Badge>
