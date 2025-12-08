@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, ArrowLeft, Loader2, Upload, X, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LocationPicker } from "@/components/location/LocationPicker";
 
 interface BusinessProfile {
   id: string;
@@ -20,6 +21,8 @@ interface BusinessProfile {
   industry: string | null;
   company_size: string | null;
   location: string | null;
+  latitude: number | null;
+  longitude: number | null;
   description: string | null;
   website: string | null;
   logo_url: string | null;
@@ -65,6 +68,8 @@ const BusinessProfilePage = () => {
   const [industry, setIndustry] = useState("");
   const [companySize, setCompanySize] = useState("");
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [description, setDescription] = useState("");
   const [website, setWebsite] = useState("");
 
@@ -97,6 +102,8 @@ const BusinessProfilePage = () => {
           setIndustry(businessProfile.industry || "");
           setCompanySize(businessProfile.company_size || "");
           setLocation(businessProfile.location || "");
+          setLatitude(businessProfile.latitude || null);
+          setLongitude(businessProfile.longitude || null);
           setDescription(businessProfile.description || "");
           setWebsite(businessProfile.website || "");
           if (businessProfile.logo_url) {
@@ -166,6 +173,8 @@ const BusinessProfilePage = () => {
           industry: industry || null,
           company_size: companySize || null,
           location: location || null,
+          latitude: latitude,
+          longitude: longitude,
           description: description || null,
           website: website || null,
           logo_url: logoUrl,
@@ -362,12 +371,17 @@ const BusinessProfilePage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
+              <Label>Location</Label>
+              <LocationPicker
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g., London, UK"
+                latitude={latitude}
+                longitude={longitude}
+                onChange={(loc, lat, lng) => {
+                  setLocation(loc);
+                  setLatitude(lat);
+                  setLongitude(lng);
+                }}
+                placeholder="Search for your business address..."
               />
             </div>
 
