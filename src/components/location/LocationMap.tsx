@@ -22,6 +22,8 @@ export interface MapMarker {
   label: string;
   type: 'worker' | 'business';
   popupContent?: string;
+  photoUrl?: string | null;
+  initials?: string;
 }
 
 interface LocationMapProps {
@@ -71,34 +73,31 @@ export function LocationMap({
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
-    // Create custom icons for workers and businesses
-    const workerIcon = L.divIcon({
-      className: 'custom-marker',
-      html: `<div style="background-color: hsl(252, 76%, 60%); width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-      </div>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-    });
-
-    const businessIcon = L.divIcon({
-      className: 'custom-marker',
-      html: `<div style="background-color: hsl(42, 65%, 53%); width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
-      </div>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-    });
+    // Helper function to create avatar marker icon
+    const createAvatarIcon = (markerData: MapMarker) => {
+      const bgColor = markerData.type === 'worker' ? 'hsl(252, 76%, 60%)' : 'hsl(42, 65%, 53%)';
+      const initials = markerData.initials || markerData.label.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      
+      let innerContent = '';
+      if (markerData.photoUrl) {
+        innerContent = `<img src="${markerData.photoUrl}" alt="${markerData.label}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><span style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: white;">${initials}</span>`;
+      } else {
+        innerContent = `<span style="font-size: 12px; font-weight: 600; color: white;">${initials}</span>`;
+      }
+      
+      return L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="background-color: ${bgColor}; width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          ${innerContent}
+        </div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+    };
 
     // Add markers
     markers.forEach((markerData) => {
-      const icon = markerData.type === 'worker' ? workerIcon : businessIcon;
+      const icon = createAvatarIcon(markerData);
       const marker = L.marker([markerData.lat, markerData.lng], { icon });
 
       if (markerData.popupContent || markerData.label) {
