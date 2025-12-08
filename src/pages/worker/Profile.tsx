@@ -102,6 +102,7 @@ const WorkerProfile = () => {
   // CV upload
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvUrl, setCvUrl] = useState<string | null>(null);
+  const [cvSignedUrl, setCvSignedUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   // Photo upload
@@ -178,6 +179,12 @@ const WorkerProfile = () => {
         setOwnEquipment(data.own_equipment || false);
         setCvUrl(data.cv_url || null);
         setPhotoUrl(data.photo_url || null);
+
+        // Get signed URL for CV viewing if CV exists
+        if (data.cv_url) {
+          const signedUrl = await getSignedCvUrl(data.cv_url);
+          setCvSignedUrl(signedUrl);
+        }
 
         // Fetch skills
         const { data: skillsData } = await supabase
@@ -280,9 +287,17 @@ const WorkerProfile = () => {
       throw uploadError;
     }
 
-    const { data: urlData } = supabase.storage.from("cvs").getPublicUrl(fileName);
+    // Return the file path for storage (not public URL since bucket is private)
+    return fileName;
+  };
 
-    return urlData.publicUrl;
+  const getSignedCvUrl = async (filePath: string) => {
+    const { data, error } = await supabase.storage.from("cvs").createSignedUrl(filePath, 3600); // 1 hour expiry
+    if (error) {
+      console.error("Error creating signed URL:", error);
+      return null;
+    }
+    return data.signedUrl;
   };
 
   const handlePhotoUpload = async (file: File) => {
@@ -360,6 +375,15 @@ const WorkerProfile = () => {
       toast({
         title: "Missing required fields",
         description: "Please provide your name and select at least one role.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!cvUrl && !cvFile) {
+      toast({
+        title: "Resume required",
+        description: "Please upload your resume/CV to continue.",
         variant: "destructive",
       });
       return;
@@ -678,12 +702,12 @@ const WorkerProfile = () => {
             {/* CV Upload */}
             <Card className="shadow-soft">
               <CardHeader>
-                <CardTitle>CV / Resume</CardTitle>
+                <CardTitle>CV / Resume <span className="text-destructive">*</span></CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cv-upload">Upload CV (PDF or Word)</Label>
-                  <p className="text-sm text-muted-foreground">Your CV will be visible to businesses. Max 10MB.</p>
+                  <Label htmlFor="cv-upload">Upload CV (PDF or Word) <span className="text-destructive">*</span></Label>
+                  <p className="text-sm text-muted-foreground">Your CV is required and will be visible to businesses. Max 10MB.</p>
                   <Input
                     id="cv-upload"
                     type="file"
@@ -719,10 +743,22 @@ const WorkerProfile = () => {
                   <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                     <FileText className="h-4 w-4" />
                     <span className="text-sm flex-1">Current CV uploaded</span>
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href={cvUrl} target="_blank" rel="noopener noreferrer">
-                        View
-                      </a>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={async () => {
+                        if (cvSignedUrl) {
+                          window.open(cvSignedUrl, '_blank');
+                        } else if (cvUrl) {
+                          const signedUrl = await getSignedCvUrl(cvUrl);
+                          if (signedUrl) {
+                            setCvSignedUrl(signedUrl);
+                            window.open(signedUrl, '_blank');
+                          }
+                        }
+                      }}
+                    >
+                      View
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleCvDelete}>
                       Delete
