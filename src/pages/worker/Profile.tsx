@@ -21,6 +21,7 @@ import { SystemsProficiency } from "@/components/worker/SystemsProficiency";
 import { LanguagesSection } from "@/components/worker/LanguagesSection";
 import { QualificationsSection } from "@/components/worker/QualificationsSection";
 import { AvailabilityCalendar } from "@/components/worker/AvailabilityCalendar";
+import { LocationPicker } from "@/components/location/LocationPicker";
 
 const ROLES = [
   { value: "accounts_payable", label: "Accounts Payable" },
@@ -75,6 +76,8 @@ const WorkerProfile = () => {
 
   // Location & Travel
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [locationMode, setLocationMode] = useState<"distance" | "time">("distance");
   const [maxCommuteKm, setMaxCommuteKm] = useState("");
   const [travelTimeMinutes, setTravelTimeMinutes] = useState("");
@@ -150,6 +153,8 @@ const WorkerProfile = () => {
 
         // Location
         setLocation(data.location || "");
+        setLatitude(data.latitude || null);
+        setLongitude(data.longitude || null);
         setMaxCommuteKm(data.max_commute_km?.toString() || "");
         setTravelTimeMinutes(data.travel_time_minutes?.toString() || "");
         setLocationConstraints(data.location_constraints || "");
@@ -382,6 +387,8 @@ const WorkerProfile = () => {
         hourly_rate_max: rateMax || null,
         rate_negotiable: rateNegotiable,
         location,
+        latitude,
+        longitude,
         max_commute_km: locationMode === "distance" && maxCommuteKm ? parseInt(maxCommuteKm) : null,
         travel_time_minutes: locationMode === "time" && travelTimeMinutes ? parseInt(travelTimeMinutes) : null,
         location_constraints: locationConstraints || null,
@@ -846,8 +853,18 @@ const WorkerProfile = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="location">Home Base Location</Label>
-                  <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City or postcode" />
+                  <Label>Home Base Location</Label>
+                  <LocationPicker
+                    value={location}
+                    latitude={latitude}
+                    longitude={longitude}
+                    onChange={(loc, lat, lng) => {
+                      setLocation(loc);
+                      setLatitude(lat);
+                      setLongitude(lng);
+                    }}
+                    placeholder="Search for your home address..."
+                  />
                 </div>
 
                 <div className="space-y-2">

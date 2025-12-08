@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Briefcase, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { LocationPicker } from "@/components/location/LocationPicker";
 
 const emailSchema = z.string().email("Invalid email address").max(255);
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters").max(100);
@@ -56,6 +57,8 @@ const Auth = () => {
   const [industry, setIndustry] = useState("");
   const [companySize, setCompanySize] = useState("");
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [website, setWebsite] = useState("");
   const [selectedUserType, setSelectedUserType] = useState<"worker" | "business">(
     (searchParams.get("type") as "worker" | "business") || "worker"
@@ -148,6 +151,8 @@ const Auth = () => {
                 industry: industry || null,
                 company_size: companySize || null,
                 location: location || null,
+                latitude: latitude,
+                longitude: longitude,
                 website: website || null,
               });
 
@@ -569,13 +574,17 @@ const Auth = () => {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signup-location">Location</Label>
-                        <Input
-                          id="signup-location"
-                          type="text"
-                          placeholder="London, UK"
+                        <Label>Location</Label>
+                        <LocationPicker
                           value={location}
-                          onChange={(e) => setLocation(e.target.value)}
+                          latitude={latitude}
+                          longitude={longitude}
+                          onChange={(loc, lat, lng) => {
+                            setLocation(loc);
+                            setLatitude(lat);
+                            setLongitude(lng);
+                          }}
+                          placeholder="Search for your business address..."
                         />
                       </div>
                       <div className="space-y-2">
