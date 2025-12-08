@@ -68,24 +68,36 @@ const Verification = () => {
     company: "",
   });
 
-  const handleSkipTest = async (role: string) => {
-    if (!workerProfileId) return;
+  const handleSkipAllTests = async () => {
+    if (!workerProfileId || selectedRoles.length === 0) return;
     
-    setSkippingTest(role);
+    setSkippingTest("all");
     try {
-      const { error } = await supabase.from("test_attempts").insert({
+      // Get roles that haven't been passed yet
+      const rolesToSkip = selectedRoles.filter(role => {
+        const attempt = testAttempts.find(a => a.role === role);
+        return !attempt?.passed;
+      });
+
+      if (rolesToSkip.length === 0) {
+        return;
+      }
+
+      // Insert passed test attempts for all pending roles
+      const inserts = rolesToSkip.map(role => ({
         worker_profile_id: workerProfileId,
         role: role as "accounts_payable" | "accounts_receivable" | "bookkeeper" | "payroll_clerk" | "management_accountant" | "credit_controller" | "financial_controller" | "finance_manager" | "cfo_fpa",
         passed: true,
         score: 100,
         questions_answered: { demo_skip: true },
-      });
-      
+      }));
+
+      const { error } = await supabase.from("test_attempts").insert(inserts);
       if (error) throw error;
 
       toast({
-        title: "Test Skipped",
-        description: `${role.replace(/_/g, ' ')} test marked as passed.`,
+        title: "Tests Skipped",
+        description: "All skill tests marked as passed.",
       });
       
       fetchVerificationData();
@@ -97,6 +109,13 @@ const Verification = () => {
       });
     } finally {
       setSkippingTest(null);
+    }
+  };
+
+  const handleToggleSkipTest = async (enabled: boolean) => {
+    setDemoMode(enabled);
+    if (enabled) {
+      await handleSkipAllTests();
     }
   };
 
@@ -320,8 +339,12 @@ const Verification = () => {
                     <span className="text-sm font-medium">Skip Test</span>
                     <Switch 
                       checked={demoMode} 
-                      onCheckedChange={setDemoMode} 
+                      onCheckedChange={handleToggleSkipTest}
+                      disabled={skippingTest === "all"}
                     />
+                    {skippingTest === "all" && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -358,27 +381,14 @@ const Verification = () => {
                           </div>
                         </div>
                         <Button
-                          onClick={() => {
-                            if (demoMode) {
-                              // Skip this specific test
-                              handleSkipTest(role);
-                            } else {
-                              navigate(`/worker/test/${role}`);
-                            }
-                          }}
-                          disabled={testStatus.status === "locked" || testStatus.status === "passed" || skippingTest === role}
-                          variant={demoMode ? "secondary" : "default"}
+                          onClick={() => navigate(`/worker/test/${role}`)}
+                          disabled={testStatus.status === "locked" || testStatus.status === "passed"}
                         >
-                          {skippingTest === role ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : null}
                           {testStatus.status === "passed" 
                             ? "Passed" 
-                            : demoMode 
-                              ? "Skip" 
-                              : testStatus.status === "not_started" 
-                                ? "Start Test" 
-                                : "Retake Test"}
+                            : testStatus.status === "not_started" 
+                              ? "Start Test" 
+                              : "Retake Test"}
                         </Button>
                       </div>
                     );
