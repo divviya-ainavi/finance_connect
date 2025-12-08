@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileText, CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle, Clock, Loader2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -68,6 +68,39 @@ export const IdInsuranceUpload = ({
         return <XCircle className="h-5 w-5 text-red-500" />;
       default:
         return <Clock className="h-5 w-5 text-yellow-500" />;
+    }
+  };
+
+  const handleViewDocument = async (documentUrl: string) => {
+    try {
+      // Extract the file path from the URL
+      const urlParts = documentUrl.split('/storage/v1/object/public/cvs/');
+      if (urlParts.length < 2) {
+        throw new Error("Invalid document URL");
+      }
+      const filePath = urlParts[1];
+      
+      // Download the file
+      const { data, error } = await supabase.storage.from("cvs").download(filePath);
+      if (error) throw error;
+      
+      // Determine content type based on file extension
+      const ext = filePath.split('.').pop()?.toLowerCase();
+      let contentType = 'application/pdf';
+      if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
+      else if (ext === 'png') contentType = 'image/png';
+      
+      // Create blob URL and open in new tab
+      const blob = new Blob([data], { type: contentType });
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } catch (error: any) {
+      console.error("Error viewing document:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open document",
+        variant: "destructive",
+      });
     }
   };
 
@@ -168,7 +201,17 @@ export const IdInsuranceUpload = ({
                       )}
                     </div>
                   </div>
-                  {getStatusBadge(doc.status)}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewDocument(doc.document_url)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    {getStatusBadge(doc.status)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -244,7 +287,17 @@ export const IdInsuranceUpload = ({
                       )}
                     </div>
                   </div>
-                  {getStatusBadge(doc.status)}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewDocument(doc.document_url)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    {getStatusBadge(doc.status)}
+                  </div>
                 </div>
               ))}
             </div>
