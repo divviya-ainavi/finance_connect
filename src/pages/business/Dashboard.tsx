@@ -10,6 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
 import PaymentDialog from "@/components/payment/PaymentDialog";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { sendNotification } from "@/hooks/useNotifications";
 
 interface BusinessProfile {
   id: string;
@@ -235,6 +237,21 @@ const BusinessDashboard = () => {
 
       if (error) throw error;
 
+      // Send notification to worker about payment completion
+      const { data: workerData } = await supabase
+        .from("worker_profiles")
+        .select("profile_id, name")
+        .eq("id", selectedPaymentRequest.worker_profile_id)
+        .single();
+
+      if (workerData) {
+        await sendNotification("payment_completed", workerData.profile_id, {
+          businessName: profile?.company_name,
+          businessProfileId: profile?.id,
+          requestId: selectedPaymentRequest.id,
+        });
+      }
+
       toast({
         title: "Payment successful!",
         description: "You can now message the candidate.",
@@ -270,6 +287,7 @@ const BusinessDashboard = () => {
             <span className="text-xl font-semibold">Business Dashboard</span>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
