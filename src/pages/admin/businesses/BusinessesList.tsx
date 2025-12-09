@@ -87,7 +87,11 @@ export default function BusinessesList() {
               </TableHeader>
               <TableBody>
                 {filteredBusinesses.map((business) => (
-                  <TableRow key={business.id}>
+                  <TableRow 
+                    key={business.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/admin/businesses/${business.id}`)}
+                  >
                     <TableCell className="font-medium">{business.company_name}</TableCell>
                     <TableCell>{business.contact_name}</TableCell>
                     <TableCell>{business.location || '-'}</TableCell>
@@ -104,7 +108,10 @@ export default function BusinessesList() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/admin/businesses/${business.id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/businesses/${business.id}`);
+                        }}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
