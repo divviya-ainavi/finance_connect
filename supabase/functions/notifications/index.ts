@@ -55,20 +55,53 @@ async function createInAppNotification(
   return !error;
 }
 
-async function getAdminProfiles(supabase: any) {
-  const { data } = await supabase
+async function getAdminProfileIds(supabase: any) {
+  // Get all admin user IDs
+  const { data: adminRoles } = await supabase
     .from("user_roles")
     .select("user_id")
     .eq("role", "admin");
   
-  if (!data || data.length === 0) return [];
+  if (!adminRoles || adminRoles.length === 0) {
+    console.log("No admin users found in user_roles");
+    return [];
+  }
   
+  console.log(`Found ${adminRoles.length} admin user(s)`);
+  
+  // Try to get profiles for these users
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id")
-    .in("user_id", data.map((r: any) => r.user_id));
+    .select("id, user_id")
+    .in("user_id", adminRoles.map((r: any) => r.user_id));
   
-  return profiles || [];
+  // If profiles exist, return their IDs
+  if (profiles && profiles.length > 0) {
+    console.log(`Found ${profiles.length} admin profile(s)`);
+    return profiles.map((p: any) => ({ id: p.id }));
+  }
+  
+  // If no profiles exist for admins, create them
+  console.log("No admin profiles found, creating them...");
+  const createdProfiles = [];
+  for (const adminRole of adminRoles) {
+    const { data: newProfile, error } = await supabase
+      .from("profiles")
+      .insert({
+        user_id: adminRole.user_id,
+        user_type: "worker", // Admin is a role, not a user type - use worker as placeholder
+      })
+      .select("id")
+      .single();
+    
+    if (newProfile) {
+      createdProfiles.push({ id: newProfile.id });
+    } else if (error) {
+      console.error("Error creating admin profile:", error);
+    }
+  }
+  
+  return createdProfiles;
 }
 
 serve(async (req) => {
@@ -94,7 +127,7 @@ serve(async (req) => {
         });
         
         // Send in-app notification to all admins
-        const adminProfiles = await getAdminProfiles(supabase);
+        const adminProfiles = await getAdminProfileIds(supabase);
         for (const admin of adminProfiles) {
           await createInAppNotification(
             supabase,
