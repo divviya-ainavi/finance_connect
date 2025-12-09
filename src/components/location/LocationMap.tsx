@@ -73,22 +73,16 @@ export function LocationMap({
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
-    // Helper function to create avatar marker icon
+    // Helper function to create avatar marker icon - colored circles based on type
     const createAvatarIcon = (markerData: MapMarker) => {
+      // Purple for workers/professionals, Gold for businesses
       const bgColor = markerData.type === 'worker' ? 'hsl(252, 76%, 60%)' : 'hsl(42, 65%, 53%)';
       const initials = markerData.initials || markerData.label.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
       
-      let innerContent = '';
-      if (markerData.photoUrl) {
-        innerContent = `<img src="${markerData.photoUrl}" alt="${markerData.label}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><span style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: white;">${initials}</span>`;
-      } else {
-        innerContent = `<span style="font-size: 12px; font-weight: 600; color: white;">${initials}</span>`;
-      }
-      
       return L.divIcon({
         className: 'custom-marker',
-        html: `<div style="background-color: ${bgColor}; width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-          ${innerContent}
+        html: `<div style="background-color: ${bgColor}; width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+          <span style="font-size: 12px; font-weight: 600; color: white;">${initials}</span>
         </div>`,
         iconSize: [36, 36],
         iconAnchor: [18, 18],
