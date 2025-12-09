@@ -175,81 +175,127 @@ export default function WorkersList() {
   const displayWorkers = getTabWorkers();
 
   const WorkerCard = ({ worker }: { worker: WorkerProfile }) => (
-    <div className="group relative bg-card border border-border rounded-xl p-4 hover:shadow-lg hover:border-primary/20 transition-all duration-200">
-      <div className="flex items-start gap-4">
-        <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
-          <AvatarImage src={worker.photo_url || undefined} alt={worker.name} />
-          <AvatarFallback className="bg-primary/10 text-primary font-medium">
-            {getInitials(worker.name)}
-          </AvatarFallback>
-        </Avatar>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold text-foreground truncate">{worker.name}</h3>
-            {getStatusBadge(worker)}
+    <div className="group relative bg-card border border-border rounded-xl overflow-hidden hover:shadow-xl hover:border-primary/30 transition-all duration-300 animate-fade-in">
+      {/* Top accent bar based on status */}
+      <div className={`h-1 w-full ${
+        worker.is_suspended ? 'bg-destructive' :
+        worker.approval_status === 'active' ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' :
+        worker.approval_status === 'declined' ? 'bg-destructive' :
+        'bg-gradient-to-r from-amber-400 to-amber-600'
+      }`} />
+      
+      <div className="p-5">
+        <div className="flex items-start gap-4">
+          {/* Avatar with ring */}
+          <div className="relative">
+            <Avatar className="h-14 w-14 ring-2 ring-background shadow-lg">
+              <AvatarImage src={worker.photo_url || undefined} alt={worker.name} />
+              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold text-lg">
+                {getInitials(worker.name)}
+              </AvatarFallback>
+            </Avatar>
+            {/* Verification indicator dot */}
+            <div className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${
+              worker.verification_score >= 100 ? 'bg-emerald-500' :
+              worker.verification_score >= 50 ? 'bg-amber-500' :
+              'bg-muted'
+            }`} />
           </div>
           
-          <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-            {worker.location && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {worker.location}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              {new Date(worker.created_at).toLocaleDateString()}
-            </span>
-          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-foreground text-lg group-hover:text-primary transition-colors truncate">
+                  {worker.name}
+                </h3>
+                <div className="flex items-center gap-2 mt-0.5 text-sm text-muted-foreground">
+                  {worker.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span className="truncate max-w-[200px]">{worker.location}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+              {getStatusBadge(worker)}
+            </div>
 
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {worker.roles.slice(0, 3).map((role) => (
-              <Badge key={role} variant="outline" className="text-xs font-normal">
-                {roleLabels[role] || role}
-              </Badge>
-            ))}
-            {worker.roles.length > 3 && (
-              <Badge variant="outline" className="text-xs font-normal">
-                +{worker.roles.length - 3} more
-              </Badge>
-            )}
+            {/* Roles */}
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {worker.roles.slice(0, 3).map((role) => (
+                <Badge 
+                  key={role} 
+                  variant="secondary" 
+                  className="text-xs font-medium bg-primary/5 text-primary/80 border-0 px-2.5 py-0.5"
+                >
+                  {roleLabels[role] || role}
+                </Badge>
+              ))}
+              {worker.roles.length > 3 && (
+                <Badge variant="outline" className="text-xs font-medium px-2.5 py-0.5">
+                  +{worker.roles.length - 3} more
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-1.5">
-            <Shield className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Verification:</span>
-            {getVerificationBadge(worker.verification_score)}
+        {/* Stats row */}
+        <div className="flex items-center gap-6 mt-5 py-3 px-4 bg-muted/30 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-background">
+              <Shield className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Verification</p>
+              <p className="font-semibold text-sm">{worker.verification_score}%</p>
+            </div>
           </div>
+          
           {worker.hourly_rate_min && (
-            <div className="flex items-center gap-1.5">
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                £{worker.hourly_rate_min}{worker.hourly_rate_max ? `-${worker.hourly_rate_max}` : ''}/hr
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-background">
+                <Briefcase className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Rate</p>
+                <p className="font-semibold text-sm">
+                  £{worker.hourly_rate_min}{worker.hourly_rate_max ? `-${worker.hourly_rate_max}` : ''}/hr
+                </p>
+              </div>
             </div>
           )}
+          
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-background">
+              <Calendar className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Joined</p>
+              <p className="font-semibold text-sm">{new Date(worker.created_at).toLocaleDateString()}</p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex gap-2">
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-2 mt-4">
           <Button
             size="sm"
             variant="outline"
+            className="gap-1.5"
             onClick={() => navigate(`/admin/workers/${worker.id}`)}
           >
-            <Eye className="h-4 w-4 mr-1" />
-            Details
+            <Eye className="h-4 w-4" />
+            View Details
           </Button>
           {worker.approval_status === "pending" && !worker.is_suspended && (
             <Button
               size="sm"
+              className="gap-1.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
               onClick={() => setSelectedWorker(worker)}
             >
-              Approve
+              <UserCheck className="h-4 w-4" />
+              Review & Approve
             </Button>
           )}
         </div>
