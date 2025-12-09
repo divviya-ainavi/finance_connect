@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { openDocument } from '@/lib/storage-utils';
+import { BehavioralInsights } from '@/components/insights/BehavioralInsights';
 import { 
   ArrowLeft, Ban, CheckCircle, User, MapPin, Briefcase, 
   Clock, Calendar, Languages, GraduationCap, Shield, 
@@ -131,6 +132,9 @@ export default function WorkerDetail() {
   const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
   const [references, setReferences] = useState<Reference[]>([]);
   const [idVerifications, setIdVerifications] = useState<IdVerification[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [projectsCompleted, setProjectsCompleted] = useState(0);
   const [suspensionReason, setSuspensionReason] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -158,6 +162,30 @@ export default function WorkerDetail() {
     if (!workerRes.error && workerRes.data) {
       setWorker(workerRes.data);
       setSuspensionReason(workerRes.data.suspension_reason || '');
+      
+      // Fetch reviews and projects for this worker
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('reviewee_profile_id', workerRes.data.profile_id)
+        .eq('is_hidden', false);
+      
+      if (reviewsData) {
+        setReviews(reviewsData);
+        if (reviewsData.length > 0) {
+          const avg = reviewsData.reduce((acc, r) => acc + r.rating, 0) / reviewsData.length;
+          setAverageRating(avg);
+        }
+      }
+
+      // Fetch projects completed count
+      const { count } = await supabase
+        .from('connection_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('worker_profile_id', id)
+        .eq('status', 'accepted');
+      
+      setProjectsCompleted(count || 0);
     }
     if (skillsRes.data) setSkills(skillsRes.data);
     if (qualsRes.data) setQualifications(qualsRes.data);
@@ -549,6 +577,13 @@ export default function WorkerDetail() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Behavioral Insights */}
+            <BehavioralInsights
+              reviews={reviews}
+              averageRating={averageRating}
+              projectsCompleted={projectsCompleted}
+            />
           </TabsContent>
 
           {/* Skills & Systems Tab */}
