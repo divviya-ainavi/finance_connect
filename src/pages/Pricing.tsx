@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Loader2, ArrowLeft } from "lucide-react";
-import logo from "@/assets/logo.png";
 import { useToast } from "@/hooks/use-toast";
+import { Header } from "@/components/layout/Header";
 
 interface SubscriptionPlan {
   id: string;
@@ -149,22 +149,16 @@ const Pricing = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      {/* Header */}
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="Axcelera" className="h-8" />
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-        </div>
-      </header>
+      <Header>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(-1)}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+      </Header>
 
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">

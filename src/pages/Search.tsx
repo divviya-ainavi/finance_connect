@@ -9,11 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Loader2, MapPin, CheckCircle, Star, Search as SearchIcon, User, LayoutGrid, Map } from "lucide-react";
-import logo from "@/assets/logo.png";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { LocationMap, MapMarker } from "@/components/location/LocationMap";
-
+import { Header } from "@/components/layout/Header";
 interface WorkerProfile {
   id: string;
   name: string;
@@ -358,25 +357,7 @@ const Search = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      {/* Header */}
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="Axcelera" className="h-8" />
-          </div>
-          <div className="flex gap-2">
-            {!user ? (
-              <Button variant="outline" onClick={() => navigate("/auth")}>
-                Sign In
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={() => navigate(userType === "worker" ? "/worker/dashboard" : "/business/dashboard")}>
-                Dashboard
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
