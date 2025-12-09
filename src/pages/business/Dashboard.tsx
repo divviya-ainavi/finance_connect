@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
 import PaymentDialog from "@/components/payment/PaymentDialog";
+import ReviewsDialog from "@/components/reviews/ReviewsDialog";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { sendNotification } from "@/hooks/useNotifications";
 
@@ -48,6 +49,9 @@ const BusinessDashboard = () => {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<ConnectionRequest | null>(null);
   const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
+  const [reviewsDialogOpen, setReviewsDialogOpen] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [ratingDistribution, setRatingDistribution] = useState<{ 1: number; 2: number; 3: number; 4: number; 5: number }>({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
 
   useEffect(() => {
     if (user) {
@@ -104,12 +108,30 @@ const BusinessDashboard = () => {
           if (profileData2) {
             const { data: reviewsData, count: reviewsCount } = await supabase
               .from("reviews")
-              .select("rating", { count: "exact" })
-              .eq("reviewee_profile_id", profileData2.id);
+              .select(`
+                *,
+                profiles!reviews_reviewer_profile_id_fkey (
+                  id,
+                  worker_profiles (name),
+                  business_profiles (company_name)
+                )
+              `)
+              .eq("reviewee_profile_id", profileData2.id)
+              .eq("is_hidden", false)
+              .order("created_at", { ascending: false });
 
             if (reviewsData && reviewsData.length > 0) {
               const avg = reviewsData.reduce((acc, r) => acc + r.rating, 0) / reviewsData.length;
               setAverageRating(avg);
+              setReviews(reviewsData);
+              
+              // Calculate rating distribution
+              const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+              reviewsData.forEach((r) => {
+                const rating = Math.round(r.rating) as 1 | 2 | 3 | 4 | 5;
+                dist[rating]++;
+              });
+              setRatingDistribution(dist);
             }
             setReviewCount(reviewsCount || 0);
           }
@@ -382,7 +404,10 @@ const BusinessDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-soft">
+          <Card 
+            className="shadow-soft cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => reviewCount > 0 && setReviewsDialogOpen(true)}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Reviews</CardTitle>
               <Star className="h-4 w-4 text-muted-foreground" />
@@ -392,7 +417,7 @@ const BusinessDashboard = () => {
                 <>
                   <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
                   <p className="text-xs text-muted-foreground">
-                    {reviewCount} review{reviewCount !== 1 ? "s" : ""}
+                    {reviewCount} review{reviewCount !== 1 ? "s" : ""} - Click to view
                   </p>
                 </>
               ) : (
@@ -553,6 +578,17 @@ const BusinessDashboard = () => {
             onPaymentComplete={handlePaymentComplete}
           />
         )}
+
+        {/* Reviews Dialog */}
+        <ReviewsDialog
+          open={reviewsDialogOpen}
+          onOpenChange={setReviewsDialogOpen}
+          reviews={reviews}
+          averageRating={averageRating}
+          ratingDistribution={ratingDistribution}
+          reviewerType="worker"
+          profileName={profile?.company_name || "Your Business"}
+        />
       </div>
     </div>
   );
