@@ -7,9 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Flag, Search, Star } from 'lucide-react';
+import { Eye, EyeOff, Flag, Search, Star, CalendarIcon, X } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface Review {
   id: string;
@@ -26,7 +30,11 @@ interface Review {
 export default function ReviewsModeration() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'flagged' | 'hidden'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'flagged' | 'hidden'>('all');
+  const [reviewerTypeFilter, setReviewerTypeFilter] = useState<'all' | 'worker' | 'business'>('all');
+  const [ratingFilter, setRatingFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [flagReason, setFlagReason] = useState('');
   const [loading, setLoading] = useState(true);
@@ -35,7 +43,7 @@ export default function ReviewsModeration() {
 
   useEffect(() => {
     fetchReviews();
-  }, [filter]);
+  }, [statusFilter, reviewerTypeFilter, ratingFilter, dateFrom, dateTo]);
 
   const fetchReviews = async () => {
     let query = supabase
@@ -43,10 +51,31 @@ export default function ReviewsModeration() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (filter === 'flagged') {
+    // Status filter
+    if (statusFilter === 'flagged') {
       query = query.eq('is_flagged', true);
-    } else if (filter === 'hidden') {
+    } else if (statusFilter === 'hidden') {
       query = query.eq('is_hidden', true);
+    }
+
+    // Reviewer type filter
+    if (reviewerTypeFilter !== 'all') {
+      query = query.eq('reviewer_type', reviewerTypeFilter);
+    }
+
+    // Rating filter
+    if (ratingFilter !== 'all') {
+      query = query.eq('rating', parseInt(ratingFilter));
+    }
+
+    // Date filters
+    if (dateFrom) {
+      query = query.gte('created_at', format(dateFrom, 'yyyy-MM-dd'));
+    }
+    if (dateTo) {
+      const endDate = new Date(dateTo);
+      endDate.setDate(endDate.getDate() + 1);
+      query = query.lt('created_at', format(endDate, 'yyyy-MM-dd'));
     }
 
     const { data, error } = await query;
@@ -111,6 +140,17 @@ export default function ReviewsModeration() {
     setActionLoading(false);
   };
 
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setReviewerTypeFilter('all');
+    setRatingFilter('all');
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setSearch('');
+  };
+
+  const hasActiveFilters = statusFilter !== 'all' || reviewerTypeFilter !== 'all' || ratingFilter !== 'all' || dateFrom || dateTo || search;
+
   const filteredReviews = reviews.filter(
     (r) =>
       r.content.toLowerCase().includes(search.toLowerCase()) ||
@@ -127,8 +167,10 @@ export default function ReviewsModeration() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1">
+            <CardTitle className="text-lg">Filters</CardTitle>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mt-4">
+              {/* Search */}
+              <div className="relative lg:col-span-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search reviews..."
@@ -137,29 +179,131 @@ export default function ReviewsModeration() {
                   className="pl-10"
                 />
               </div>
-              <div className="flex gap-2">
+
+              {/* Reviewer Type Filter */}
+              <Select value={reviewerTypeFilter} onValueChange={(value: 'all' | 'worker' | 'business') => setReviewerTypeFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Reviewer Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="worker">Finance Professional</SelectItem>
+                  <SelectItem value="business">Business</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Rating Filter */}
+              <Select value={ratingFilter} onValueChange={setRatingFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Rating" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Ratings</SelectItem>
+                  <SelectItem value="5">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span>5 Stars</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="4">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span>4 Stars</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="3">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span>3 Stars</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="2">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span>2 Stars</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="1">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span>1 Star</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Date From */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, 'PP') : 'From Date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-background" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {/* Date To */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, 'PP') : 'To Date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-background" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Status Filters & Clear */}
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={statusFilter === 'flagged' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('flagged')}
+              >
+                Flagged
+              </Button>
+              <Button
+                variant={statusFilter === 'hidden' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('hidden')}
+              >
+                Hidden
+              </Button>
+              
+              {hasActiveFilters && (
                 <Button
-                  variant={filter === 'all' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
-                  onClick={() => setFilter('all')}
+                  onClick={clearFilters}
+                  className="ml-auto text-muted-foreground"
                 >
-                  All
+                  <X className="h-4 w-4 mr-1" />
+                  Clear Filters
                 </Button>
-                <Button
-                  variant={filter === 'flagged' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilter('flagged')}
-                >
-                  Flagged
-                </Button>
-                <Button
-                  variant={filter === 'hidden' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilter('hidden')}
-                >
-                  Hidden
-                </Button>
-              </div>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -187,7 +331,9 @@ export default function ReviewsModeration() {
                     <TableCell>{review.title || '-'}</TableCell>
                     <TableCell className="max-w-xs truncate">{review.content}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{review.reviewer_type}</Badge>
+                      <Badge variant="secondary">
+                        {review.reviewer_type === 'worker' ? 'Finance Professional' : 'Business'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
