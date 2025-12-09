@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Loader2, MapPin, ArrowLeft, Star, Send, CheckCircle2, MessageSquare, Briefcase, Shield, Clock, TrendingUp, FileText, ExternalLink } from "lucide-react";
+import { BehavioralInsights } from "@/components/insights/BehavioralInsights";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -714,6 +715,14 @@ const CandidateDetail = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Behavioral & Communication Insights */}
+          <BehavioralInsights
+            reviews={reviews}
+            averageRating={averageRating}
+            projectsCompleted={projectsDelivered}
+            className="shadow-soft"
+          />
 
           {/* Roles */}
           <Card className="shadow-soft">
