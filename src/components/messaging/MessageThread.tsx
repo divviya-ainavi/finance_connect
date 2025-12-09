@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { sendNotification } from "@/hooks/useNotifications";
 
 interface Message {
   id: string;
@@ -21,9 +22,10 @@ interface MessageThreadProps {
   connectionRequestId: string;
   otherPartyName: string;
   otherPartyPhoto?: string;
+  otherPartyProfileId?: string;
 }
 
-export function MessageThread({ connectionRequestId, otherPartyName, otherPartyPhoto }: MessageThreadProps) {
+export function MessageThread({ connectionRequestId, otherPartyName, otherPartyPhoto, otherPartyProfileId }: MessageThreadProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -132,6 +134,30 @@ export function MessageThread({ connectionRequestId, otherPartyName, otherPartyP
       });
 
       if (error) throw error;
+
+      // Send notification to recipient
+      if (otherPartyProfileId) {
+        // Get sender's name
+        const { data: workerProfile } = await supabase
+          .from("worker_profiles")
+          .select("name")
+          .eq("profile_id", profileId)
+          .maybeSingle();
+
+        const { data: businessProfile } = await supabase
+          .from("business_profiles")
+          .select("company_name")
+          .eq("profile_id", profileId)
+          .maybeSingle();
+
+        const senderName = workerProfile?.name || businessProfile?.company_name || "Someone";
+
+        await sendNotification("new_message", otherPartyProfileId, {
+          senderName,
+          senderProfileId: profileId,
+          connectionRequestId,
+        });
+      }
 
       setNewMessage("");
     } catch (error: any) {

@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
 import { LocationPicker } from "@/components/location/LocationPicker";
+import { sendNotification } from "@/hooks/useNotifications";
 
 const emailSchema = z.string().email("Invalid email address").max(255);
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters").max(100);
@@ -176,6 +177,15 @@ const Auth = () => {
             if (businessError) throw businessError;
           }
         }
+
+        // Send onboarding notification
+        const userName = selectedUserType === "worker" ? name : contactName;
+        await sendNotification("user_onboarded", undefined, {
+          email,
+          name: userName,
+          userType: selectedUserType,
+          userId: data.user.id,
+        });
 
         toast({
           title: "Account created!",

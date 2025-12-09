@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import ReviewSummary from "@/components/reviews/ReviewSummary";
 import ReviewList from "@/components/reviews/ReviewList";
+import { sendNotification } from "@/hooks/useNotifications";
 
 interface WorkerProfile {
   id: string;
@@ -308,7 +309,7 @@ const CandidateDetail = () => {
 
       if (!businessProfile) return;
 
-      const { error } = await supabase
+      const { data: requestData, error } = await supabase
         .from("connection_requests")
         .insert([{
           business_profile_id: businessProfile.id,
@@ -318,9 +319,32 @@ const CandidateDetail = () => {
           remote_onsite: remoteOnsite,
           rate_offered: rateOffered ? parseFloat(rateOffered) : null,
           status: "pending",
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Get worker's profile_id and send notification
+      const { data: workerProfile } = await supabase
+        .from("worker_profiles")
+        .select("profile_id")
+        .eq("id", id!)
+        .single();
+
+      const { data: businessData } = await supabase
+        .from("business_profiles")
+        .select("company_name")
+        .eq("id", businessProfile.id)
+        .single();
+
+      if (workerProfile) {
+        await sendNotification("connection_request_sent", workerProfile.profile_id, {
+          businessName: businessData?.company_name || "A business",
+          businessProfileId: businessProfile.id,
+          requestId: requestData?.id,
+        });
+      }
 
       toast({
         title: "Connection request sent",

@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Briefcase, Loader2, CheckCircle, Clock, FileText, User, LogOut, Star, MessageSquare, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReviewForm from "@/components/reviews/ReviewForm";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { sendNotification } from "@/hooks/useNotifications";
 
 interface WorkerProfile {
   id: string;
@@ -202,12 +204,44 @@ const WorkerDashboard = () => {
 
   const handleAcceptRequest = async (requestId: string) => {
     try {
+      const request = requests.find((r) => r.id === requestId);
+      
       const { error } = await supabase
         .from("connection_requests")
         .update({ status: "accepted" })
         .eq("id", requestId);
 
       if (error) throw error;
+
+      // Send notification to business
+      if (request) {
+        // Get business email
+        const { data: businessData } = await supabase
+          .from("business_profiles")
+          .select("profile_id, company_name")
+          .eq("id", request.business_profile_id)
+          .single();
+
+        if (businessData) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("id", businessData.profile_id)
+            .single();
+
+          if (profileData) {
+            const { data: userData } = await supabase.auth.admin.getUserById(profileData.user_id);
+            
+            await sendNotification("connection_accepted", businessData.profile_id, {
+              businessEmail: userData?.user?.email || "",
+              businessName: businessData.company_name,
+              workerName: profile?.name,
+              workerProfileId: profile?.id,
+              requestId,
+            });
+          }
+        }
+      }
 
       toast({
         title: "Request accepted",
@@ -226,12 +260,43 @@ const WorkerDashboard = () => {
 
   const handleDeclineRequest = async (requestId: string) => {
     try {
+      const request = requests.find((r) => r.id === requestId);
+      
       const { error } = await supabase
         .from("connection_requests")
         .update({ status: "declined" })
         .eq("id", requestId);
 
       if (error) throw error;
+
+      // Send notification to business
+      if (request) {
+        const { data: businessData } = await supabase
+          .from("business_profiles")
+          .select("profile_id, company_name")
+          .eq("id", request.business_profile_id)
+          .single();
+
+        if (businessData) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("id", businessData.profile_id)
+            .single();
+
+          if (profileData) {
+            const { data: userData } = await supabase.auth.admin.getUserById(profileData.user_id);
+            
+            await sendNotification("connection_declined", businessData.profile_id, {
+              businessEmail: userData?.user?.email || "",
+              businessName: businessData.company_name,
+              workerName: profile?.name,
+              workerProfileId: profile?.id,
+              requestId,
+            });
+          }
+        }
+      }
 
       toast({
         title: "Request declined",
@@ -364,6 +429,7 @@ const WorkerDashboard = () => {
             <span className="text-xl font-semibold">Finance Professional Dashboard</span>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Button variant="ghost" size="sm" onClick={() => navigate("/messages")} className="relative">
               <MessageSquare className="h-4 w-4" />
               {unreadMessageCount > 0 && (
