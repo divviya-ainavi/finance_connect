@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Briefcase, Shield, CheckCircle, Search, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.svg";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ const Landing = () => {
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Axcelera" className="h-8" />
+            <img src={logo} alt="Finance Connect" className="h-8" />
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => navigate("/pricing")}>
@@ -229,7 +229,7 @@ const Landing = () => {
       {/* Footer */}
       <footer className="border-t py-8 bg-background">
         <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-          <p>&copy; 2025 Axcelera. All rights reserved.</p>
+          <p>&copy; 2025 Finance Connect. All rights reserved.</p>
         </div>
       </footer>
     </div>

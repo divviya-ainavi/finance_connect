@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.svg";
 
 interface HeaderProps {
   showLogo?: boolean;
@@ -26,10 +26,10 @@ export function Header({ showLogo = true, title, icon, backTo, children }: Heade
             </Button>
           )}
           {showLogo && !title && (
-            <img 
-              src={logo} 
-              alt="Axcelera" 
-              className="h-8 cursor-pointer" 
+            <img
+              src={logo}
+              alt="Finance Connect"
+              className="h-8 cursor-pointer"
               onClick={() => navigate("/")}
             />
           )}

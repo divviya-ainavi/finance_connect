@@ -533,7 +533,7 @@ const Search = () => {
                     )}
                     {(candidate.projects_delivered ?? 0) > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {candidate.projects_delivered} projects via Axcelera
+                        {candidate.projects_delivered} projects completed
                       </p>
                     )}
                     {getVerificationCount(candidate) > 0 && (
@@ -655,7 +655,7 @@ const Search = () => {
                     )}
                     {(candidate.projects_delivered ?? 0) > 0 && (
                       <p className="text-sm text-muted-foreground">
-                        {candidate.projects_delivered} projects via Axcelera
+                        {candidate.projects_delivered} projects completed
                       </p>
                     )}
                   </div>

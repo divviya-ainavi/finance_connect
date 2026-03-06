@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.svg";
 import { z } from "zod";
 import { LocationPicker } from "@/components/location/LocationPicker";
 import { sendNotification } from "@/hooks/useNotifications";
@@ -189,7 +189,7 @@ const Auth = () => {
 
         toast({
           title: "Account created!",
-          description: "Welcome to Axcelera.",
+          description: "Welcome to Finance Connect.",
         });
 
         // Redirect based on user type
@@ -419,7 +419,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <img src={logo} alt="Axcelera" className="h-10" />
+            <img src={logo} alt="Finance Connect" className="h-10" />
           </div>
           <p className="text-muted-foreground">
             Sign in or create an account to get started
